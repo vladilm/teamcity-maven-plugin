@@ -27,7 +27,15 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-@Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, aggregator = false, requiresProject = true, requiresDependencyResolution = ResolutionScope.TEST, requiresDependencyCollection = ResolutionScope.TEST)
+@Mojo(
+        name = "build",
+        defaultPhase = LifecyclePhase.PACKAGE,
+        threadSafe = true,
+        aggregator = false,
+        requiresProject = true,
+        requiresDependencyResolution = ResolutionScope.TEST,
+        requiresDependencyCollection = ResolutionScope.TEST
+)
 public class AssemblePluginMojo extends BaseTeamCityMojo {
     @Parameter(defaultValue = "${project.remoteProjectRepositories}")
     private List<RemoteRepository> projectRepos;

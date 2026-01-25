@@ -16,11 +16,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-@Mojo(name = "build-agent", defaultPhase = LifecyclePhase.PACKAGE,
+@Mojo(
+        name = "build-agent",
+        defaultPhase = LifecyclePhase.PACKAGE,
+        threadSafe = true,
         aggregator = true,
         requiresProject = true,
         requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME,
-        requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME)
+        requiresDependencyCollection = ResolutionScope.COMPILE_PLUS_RUNTIME
+)
 @Getter
 @Setter
 public class AgentPluginMojo extends BaseTeamCityMojo {
