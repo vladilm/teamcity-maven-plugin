@@ -7,6 +7,7 @@
                     <element id="module-output" name="launcher" />
                 </element>
                 <element id="library" level="project" name="JetLauncher App-Wrapper IMPL" />
+            </element>
         </root>
     </artifact>
 </component>
