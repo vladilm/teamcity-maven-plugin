@@ -68,10 +68,11 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
                 if (plugin.isPresent()) {
                     Plugin actualPlugin = plugin.get();
                     List<String> customWebappPaths = util.lookupFor((Xpp3Dom) actualPlugin.getConfiguration(), "webResources", "resource", "directory");
-                    if (customWebappPaths.isEmpty())
+                    if (customWebappPaths.isEmpty()) {
                         webappPaths = Jdk8Compat.of(project.getBasedir() + "/src/main/webapp");
-                    else
+                    } else {
                         webappPaths = customWebappPaths;
+                    }
                 }
             }
 
@@ -103,8 +104,9 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
             attachedArtifacts.add(new ResultArtifact("zip", TEAMCITY_PLUGIN_CLASSIFIER_PACKED, pluginPacked, zipPackedAssemblyContext));
         }
 
-        if (isApplicable())
+        if (isApplicable()) {
             ideaArtifactList.addAll(new ArtifactBuilder(util.getLog(), util).build(getAssemblyContexts(), parameters.getIntellijProjectPath()));
+        }
     }
 
     public boolean isApplicable() {
@@ -117,8 +119,9 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
 
         Path serverPath = util.createDir(serverPluginRoot.resolve("server"));
         List<String> exclusions = new ArrayList<>(parameters.getExclusions());
-        if (agentSpec != null && parameters.isExcludeAgent())
+        if (agentSpec != null && parameters.isExcludeAgent()) {
             exclusions.add(agentSpec);
+        }
         List<Artifact> nodes = util.getDependencyNodeList(rootNode, parameters.getSpec(), exclusions);
         Map<Boolean, List<Artifact>> dependencies = nodes.stream().collect(Collectors.partitioningBy(it -> "teamcity-agent-plugin".equalsIgnoreCase(it.getClassifier())));
         assemblyContext.getPaths().add(new PathSet(serverPath));
@@ -135,8 +138,9 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
             List<org.codehaus.plexus.archiver.FileSet> fileSets = new ArrayList<>();
             for (String buildServerResource : getBuildServerResources()) {
                 Path path = Jdk8Compat.ofPath(buildServerResource);
-                if (!path.isAbsolute())
+                if (!path.isAbsolute()) {
                     path = project.getBasedir().toPath().resolve(path);
+                }
                 org.codehaus.plexus.archiver.FileSet fs = new DefaultFileSet(path.toFile()).prefixed("buildServerResources/");
                 compressedBuildServerResources.getPathsIncluded().add(path);
                 fileSets.add(fs);
@@ -187,9 +191,9 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
     }
 
     private List<String> getBuildServerResources() {
-        if (!parameters.getBuildServerResources().isEmpty())
+        if (!parameters.getBuildServerResources().isEmpty()) {
             return parameters.getBuildServerResources();
-        else {
+        } else {
             if (!webappPaths.isEmpty()) {
                 return webappPaths.stream().map(it -> util.absOrProject(it).resolve("plugins").resolve(parameters.getPluginName())).filter(it->it.toFile().exists()).map(it -> it.toString()).collect(Collectors.toList());
             }

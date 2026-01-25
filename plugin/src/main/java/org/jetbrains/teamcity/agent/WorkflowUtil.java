@@ -115,8 +115,9 @@ public class WorkflowUtil {
         List<ResolvedArtifact> result = new ArrayList<>();
         for (Artifact node : nodes) {
             Artifact alternativeArtifact = findAlternativeArtifacts(node);
-            if (alternativeArtifact == null)
+            if (alternativeArtifact == null) {
                 continue;
+            }
             org.eclipse.aether.artifact.Artifact source = resolve.resolve(alternativeArtifact);
             ResolvedArtifact ra = new ResolvedArtifact(source, isReactorProject(node));
             result.add(ra);
@@ -182,8 +183,9 @@ public class WorkflowUtil {
                 }
             }
         }
-        if (it.toFile().isDirectory() || (it.toFile().isFile() && "teamcity-plugin.xml".equalsIgnoreCase(it.toFile().getName())))
+        if (it.toFile().isDirectory() || (it.toFile().isFile() && "teamcity-plugin.xml".equalsIgnoreCase(it.toFile().getName()))) {
             return false;
+        }
         return true;
     }
 
@@ -195,9 +197,9 @@ public class WorkflowUtil {
         if ("war".equalsIgnoreCase(a.getType())) {
             if (project.getArtifact().equals(a)) {
                 List<Artifact> jarArtifacts = project.getAttachedArtifacts().stream().filter(it -> it.getType().equalsIgnoreCase("jar")).collect(Collectors.toList());
-                if (jarArtifacts.size() == 1)
+                if (jarArtifacts.size() == 1) {
                     return jarArtifacts.get(0);
-                else {
+                } else {
                     getLog().warn("Not possible to resolve WAR " + key(a) + " to a classes artifact. The result is [" + jarArtifacts.stream().map(ArtifactUtils::key).collect(Collectors.joining(",")) + "]");
                     return null;// no need to attach war file inside the plugin.
                 }
@@ -245,8 +247,9 @@ public class WorkflowUtil {
 
     private boolean isParentClassifierIn(DependencyNode it, String s, String s1) {
         if (it.getParent() != null && (Objects.equals(s, it.getParent().getArtifact().getClassifier()) ||
-                Objects.equals(s1, it.getParent().getArtifact().getClassifier())))
+                Objects.equals(s1, it.getParent().getArtifact().getClassifier()))) {
             return false;
+        }
         return true;
     }
 
@@ -303,10 +306,11 @@ public class WorkflowUtil {
                 Files.copy(source.toPath(), destination);
             }
         } catch (NoSuchFileException e) {
-            if (failOnMissingDependencies)
+            if (failOnMissingDependencies) {
                 getLog().error("Can't find dependency to add to plugin " + source);
-            else
+            } else {
                 destination.toFile().createNewFile();
+            }
             getLog().warn("NoSuchFileException: " + e.getMessage());
         } catch (FileAlreadyExistsException e) {
             Files.copy(source.toPath(), destination, REPLACE_EXISTING);
@@ -421,8 +425,9 @@ public class WorkflowUtil {
                 for (Path entry : filesInAgentZip) {
                     Path relativePath = zipfs.getPath(source.relativize(entry).toString());
                     try {
-                        if (Jdk8Compat.isNotEmpty(relativePath.toString()))
+                        if (Jdk8Compat.isNotEmpty(relativePath.toString())) {
                             Files.copy(entry, relativePath);
+                        }
                     } catch (IOException e) {
                         getLog().warn("Can't zip file " + entry + " to " + relativePath, e);
                     }
@@ -464,10 +469,11 @@ public class WorkflowUtil {
     }
 
     public String getAssemblyName(String artifactId, String prefix, String suffix) {
-        if (Jdk8Compat.isNotEmpty(suffix))
+        if (Jdk8Compat.isNotEmpty(suffix)) {
             suffix = "::" + suffix;
-        else
+        } else {
             suffix = "";
+        }
         return "TC::" + prefix + "::" + artifactId + suffix;
     }
 
@@ -476,8 +482,9 @@ public class WorkflowUtil {
     }
 
     public List<String> lookupFor(Xpp3Dom configuration, String... paths) {
-        if (configuration == null)
+        if (configuration == null) {
             return Collections.emptyList();
+        }
         Stream<Xpp3Dom> tmpStream = Stream.of(configuration);
         for (String path: paths) {
             tmpStream = tmpStream.flatMap(it -> Arrays.stream(it.getChildren(path)));
@@ -535,8 +542,9 @@ public class WorkflowUtil {
 
     public Path absOrProject(String path) {
         Path p = Jdk8Compat.ofPath(path);
-        if (p.isAbsolute())
+        if (p.isAbsolute()) {
             return p;
+        }
         return Jdk8Compat.ofPath(project.getBasedir().getPath()).resolve(p).toAbsolutePath();
     }
 }

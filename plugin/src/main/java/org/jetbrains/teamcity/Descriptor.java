@@ -39,13 +39,17 @@ public class Descriptor {
     private Map<String, String> parameters = new HashMap<>();
 
     public void adjustDefaults(File projectBuildOutputDirectory, String fileName, MavenProject project, String pluginVersion) {
-        if (path == null)
+        if (path == null) {
             path = projectBuildOutputDirectory.toPath().resolve("META-INF").resolve(fileName).toFile();
-        if (this.pluginVersion == null)
+        }
+        if (this.pluginVersion == null) {
             this.pluginVersion = pluginVersion;
-        if (this.pluginVersion == null)
+        }
+        if (this.pluginVersion == null) {
             this.pluginVersion = project.getProperties().getProperty("teamcity.plugin.version");
-        if (this.pluginVersion == null)
+        }
+        if (this.pluginVersion == null) {
             this.pluginVersion = project.getVersion();
+        }
     }
 }

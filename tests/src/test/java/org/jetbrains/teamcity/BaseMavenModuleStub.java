@@ -1,6 +1,5 @@
 package org.jetbrains.teamcity;
 
-import org.apache.maven.artifact.factory.DefaultArtifactFactory;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.testing.ArtifactStubFactory;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
@@ -30,14 +29,18 @@ public class BaseMavenModuleStub extends MavenProjectStub {
         mavenDependency.setGroupId( spec[0] );
         mavenDependency.setArtifactId( spec[1] );
         mavenDependency.setVersion( spec[2] );
-        if (spec.length > 3 && !spec[3].isBlank())
+        if (spec.length > 3 && !spec[3].isBlank()) {
             mavenDependency.setClassifier( spec[3] );
-        if (spec.length > 4 && !spec[4].isBlank())
+        }
+        if (spec.length > 4 && !spec[4].isBlank()) {
             mavenDependency.setType( spec[4] );
-        if (spec.length > 5 && !spec[5].isBlank())
+        }
+        if (spec.length > 5 && !spec[5].isBlank()) {
             mavenDependency.setScope( spec[5] );
-        if (spec.length > 6 && !spec[6].isBlank())
+        }
+        if (spec.length > 6 && !spec[6].isBlank()) {
             mavenDependency.setOptional( spec[6] );
+        }
         dependencies.add(mavenDependency);
     }
 

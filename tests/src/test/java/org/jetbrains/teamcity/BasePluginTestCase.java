@@ -90,10 +90,12 @@ public abstract class BasePluginTestCase {
                         MavenProject p = projectOptional.get();
                         if ("teamcity-agent-plugin".equalsIgnoreCase(artifact.getClassifier())) {
                             return Path.of(p.getBuild().getDirectory(), p.getArtifactId() + "-" + p.getVersion() + "-" + artifact.getClassifier() + "." + artifact.getExtension()).toFile();
-                        } else
+                        } else {
                             return Path.of(p.getBuild().getDirectory(), p.getArtifactId() + "-" + p.getVersion() + "." + artifact.getExtension()).toFile();
-                    } else
+                        }
+                    } else {
                         return null;
+                    }
                 }
 
                 @Override

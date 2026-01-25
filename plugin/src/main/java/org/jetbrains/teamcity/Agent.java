@@ -40,14 +40,16 @@ public class Agent {
     }
 
     public void setDefaultValues(String spec, MavenProject project, File projectBuildOutputDirectory, String pluginVersion) {
-        if (Objects.isNull(this.spec))
+        if (Objects.isNull(this.spec)) {
             this.spec = spec;
+        }
         if (pluginName == null) {
             pluginName = project.getArtifactId();
             artifactId = project.getArtifactId();
         }
-        if (exclusions == null)
+        if (exclusions == null) {
             exclusions = Jdk8Compat.of("org.jetbrains.teamcity", "::zip");
+        }
         descriptor.adjustDefaults(projectBuildOutputDirectory, "teamcity-agent-plugin.xml", project, pluginVersion);
     }
 

@@ -46,8 +46,9 @@ public class AgentPluginWorkflow implements ArtifactListProvider {
             AssemblyContext assemblyContext = buildAgentPlugin(rootNode);
             assemblyContexts.add(assemblyContext);
         }
-        if (isCreateIdeaArtifacts())
+        if (isCreateIdeaArtifacts()) {
             ideaArtifactList.addAll(new ArtifactBuilder(util.getLog(), util).build(getAssemblyContexts(), parameters.getIntellijProjectPath()));
+        }
     }
 
     public boolean isApplicable() {

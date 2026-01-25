@@ -34,8 +34,9 @@ public class AssemblyContext {
     }
 
     public static Path baseOn(Path dir, Path base) {
-        if (dir != null && dir.isAbsolute())
+        if (dir != null && dir.isAbsolute()) {
             return base.relativize(dir);
+        }
         return dir;
     }
 }

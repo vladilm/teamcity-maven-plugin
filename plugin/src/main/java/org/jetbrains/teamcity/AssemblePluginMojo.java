@@ -122,10 +122,12 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
         if (pluginExecution != null) {
             Xpp3Dom configuration = (Xpp3Dom) pluginExecution.getConfiguration();
             for (Xpp3Dom node:configuration.getChildren()) {
-                if ("agent".equalsIgnoreCase(node.getName()))
+                if ("agent".equalsIgnoreCase(node.getName())) {
                     agent.setDefaultValues(".", getProject(), getProjectBuildOutputDirectory(), pluginVersion);
-                if ("server".equalsIgnoreCase(node.getName()))
+                }
+                if ("server".equalsIgnoreCase(node.getName())) {
                     server.setDefaultValues(".", getProject(), getProjectBuildOutputDirectory(), pluginVersion);
+                }
             }
         }
     }
@@ -134,19 +136,22 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
         Optional<Plugin> plugin = findPluginConfiguration();
         if (plugin.isPresent()) {
             List<PluginExecution> executions = plugin.get().getExecutions();
-            if (executions.size() == 1)
+            if (executions.size() == 1) {
                 return executions.get(0);
+            }
             for (PluginExecution e : executions) {
-                if (Objects.equals(execution.getExecutionId(), e.getId()))
+                if (Objects.equals(execution.getExecutionId(), e.getId())) {
                     return e;
+                }
             }
         }
         return null;
     }
 
     private Optional<Plugin> findPluginConfiguration() {
-        if (pluginDescriptor.getPlugin() != null)
+        if (pluginDescriptor.getPlugin() != null) {
             return Optional.of(pluginDescriptor.getPlugin());
+        }
         Optional<Plugin> p = getProject().getBuild().getPlugins().stream().filter(it -> match(it, this.pluginDescriptor)).findFirst();
         return p;
     }

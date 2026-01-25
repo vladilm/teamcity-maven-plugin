@@ -65,16 +65,17 @@ public class ArtifactBuilder {
             ArtifactNode location = getArtifactNode(root, ps);
             for (PathEntry pe: ps.getPathEntryList()) {
                 ArtifactNode.ArtifactNodeType type = FILE;
-                if (pe instanceof DependencyPathEntry)
+                if (pe instanceof DependencyPathEntry) {
                     type = DEPENDENCY;
-                else if (pe instanceof FilePathEntry)
+                } else if (pe instanceof FilePathEntry) {
                     type = FILE;
-                else if (pe instanceof DirCopyPathEntry)
+                } else if (pe instanceof DirCopyPathEntry) {
                     type = DIR_COPY;
-                else if (pe instanceof ArtifactPathEntry)
+                } else if (pe instanceof ArtifactPathEntry) {
                     type = ARTIFACT;
-                else if (pe instanceof CompressedPathEntry)
+                } else if (pe instanceof CompressedPathEntry) {
                     type = COMPRESSED_FILE;
+                }
                 location.getChilds().add(new ArtifactNode(pe.getName(), type, pe));
             }
         }
@@ -173,8 +174,9 @@ public class ArtifactBuilder {
                 setIdName(element, "file-copy", null);
                 FilePathEntry fpe = (FilePathEntry) artifactNode.getInfo();
                 element.setAttribute("path", "$PROJECT_DIR$/"+relativeTo(fpe.getResolved(), ideaProjectRoot));
-                if (fpe.getName() != null)
+                if (fpe.getName() != null) {
                     element.setAttribute("output-file-name", fpe.getName());
+                }
 
             }
         } else if (artifactNode.getType() == COMPRESSED_FILE) {
@@ -190,8 +192,9 @@ public class ArtifactBuilder {
                 setIdName(element, "archive", fpe.getName());
                 Element e = element;
                 String prefixInArchive = fpe.getPrefixInArchive();
-                if (Jdk8Compat.isNotEmpty(prefixInArchive))
+                if (Jdk8Compat.isNotEmpty(prefixInArchive)) {
                     e = newElement(element, "directory", prefixInArchive);
+                }
                 for(Path resolved: fpe.resolve()) {
                     Element dirCopy = newElement(e, "dir-copy", null);
                     dirCopy.setAttribute("path", "$PROJECT_DIR$/" + relativeTo(resolved, ideaProjectRoot));
@@ -220,10 +223,12 @@ public class ArtifactBuilder {
     }
 
     private void setIdName(Element element, String id, String name) {
-        if (id != null)
+        if (id != null) {
             element.setAttribute("id", id);
-        if (name != null)
+        }
+        if (name != null) {
             element.setAttribute("name", name);
+        }
     }
 
     private String getMavenLibraryName(Artifact artifact) {
@@ -249,8 +254,9 @@ public class ArtifactBuilder {
             ArtifactNode an = new ArtifactNode(name, DIR, null);
             current.getChilds().add(an);
             return an;
-        } else
+        } else {
             return current;
+        }
     }
 
 

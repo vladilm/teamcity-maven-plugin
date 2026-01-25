@@ -47,20 +47,27 @@ public class Server {
     private boolean requireKotlinDsl;
 
     public void setDefaultValues(String spec, MavenProject project, File projectBuildOutputDirectory, String pluginVersion) {
-        if (Objects.isNull(this.spec))
+        if (Objects.isNull(this.spec)) {
             this.spec = spec;
-        if (pluginName == null)
+        }
+        if (pluginName == null) {
             pluginName = project.getArtifactId();
-        if (exclusions == null)
+        }
+        if (exclusions == null) {
             exclusions = Jdk8Compat.of("org.jetbrains.teamcity");
-        if (commonExclusions == null)
+        }
+        if (commonExclusions == null) {
             commonExclusions = Jdk8Compat.of("org.jetbrains.teamcity");
-        if (buildServerResources == null)
+        }
+        if (buildServerResources == null) {
             buildServerResources = new ArrayList<>();
-        if (kotlinDslDescriptorsPath == null)
+        }
+        if (kotlinDslDescriptorsPath == null) {
             kotlinDslDescriptorsPath = projectBuildOutputDirectory.toPath().resolve("kotlin-dsl").toFile();
-        if (uiSchemasPath == null)
+        }
+        if (uiSchemasPath == null) {
             uiSchemasPath = projectBuildOutputDirectory.toPath().resolve("ui-schemas").toFile();
+        }
         descriptor.adjustDefaults(projectBuildOutputDirectory, "teamcity-plugin.xml", project, pluginVersion);
     }
 
