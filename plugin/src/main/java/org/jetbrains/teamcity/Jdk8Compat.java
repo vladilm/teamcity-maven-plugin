@@ -1,5 +1,6 @@
 package org.jetbrains.teamcity;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -23,8 +24,8 @@ public final class Jdk8Compat {
         }
     }
 
-    public static boolean isEmpty(String s) {
-        return s == null || s.isEmpty();
+    public static boolean isNotEmpty(@Nullable String s) {
+        return s != null && !s.isEmpty();
     }
 
     public static Path ofPath(String first, String... more) {

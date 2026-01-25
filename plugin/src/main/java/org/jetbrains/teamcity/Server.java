@@ -69,7 +69,7 @@ public class Server {
     }
 
     private boolean ntb(String spec) {
-        return spec != null && !Jdk8Compat.isEmpty(spec);
+        return Jdk8Compat.isNotEmpty(spec);
     }
 
     public boolean isNeedToBuildCommon() {
