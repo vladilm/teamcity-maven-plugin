@@ -36,7 +36,7 @@ public class Agent {
     private List<SourceDest> extras;
 
     public boolean isNeedToBuild() {
-        return spec != null && !Jdk8Compat.isBlank(spec);
+        return spec != null && !Jdk8Compat.isEmpty(spec);
     }
 
     public void setDefaultValues(String spec, MavenProject project, File projectBuildOutputDirectory, String pluginVersion) {

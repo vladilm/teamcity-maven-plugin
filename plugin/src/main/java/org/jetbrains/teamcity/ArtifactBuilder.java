@@ -189,7 +189,7 @@ public class ArtifactBuilder {
                 CompressedPathEntry fpe = (CompressedPathEntry) artifactNode.getInfo();
                 setIdName(element, "archive", fpe.getName());
                 Element e = element;
-                if (fpe.getPrefixInArchive() != null && !Jdk8Compat.isBlank(fpe.getPrefixInArchive()))
+                if (fpe.getPrefixInArchive() != null && !Jdk8Compat.isEmpty(fpe.getPrefixInArchive()))
                     e = newElement(element, "directory", fpe.getPrefixInArchive());
                 for(Path resolved: fpe.resolve()) {
                     Element dirCopy = newElement(e, "dir-copy", null);
@@ -244,7 +244,7 @@ public class ArtifactBuilder {
                 return an;
             }
         }
-        if (name != null && !Jdk8Compat.isBlank(name)) { // skip empty directories
+        if (name != null && !Jdk8Compat.isEmpty(name)) { // skip empty directories
             ArtifactNode an = new ArtifactNode(name, DIR, null);
             current.getChilds().add(an);
             return an;

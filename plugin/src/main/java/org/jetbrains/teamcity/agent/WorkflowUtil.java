@@ -97,7 +97,7 @@ public class WorkflowUtil {
 //    }
 
     public boolean isNeedToBuild(String a) {
-        return a != null && !Jdk8Compat.isBlank(a);
+        return a != null && !Jdk8Compat.isEmpty(a);
     }
 
 
@@ -421,7 +421,7 @@ public class WorkflowUtil {
                 for (Path entry : filesInAgentZip) {
                     Path relativePath = zipfs.getPath(source.relativize(entry).toString());
                     try {
-                        if (!Jdk8Compat.isBlank(relativePath.toString()))
+                        if (!Jdk8Compat.isEmpty(relativePath.toString()))
                             Files.copy(entry, relativePath);
                     } catch (IOException e) {
                         getLog().warn("Can't zip file " + entry + " to " + relativePath, e);
@@ -464,7 +464,7 @@ public class WorkflowUtil {
     }
 
     public String getAssemblyName(String artifactId, String prefix, String suffix) {
-        if (suffix != null && !Jdk8Compat.isBlank(suffix))
+        if (suffix != null && !Jdk8Compat.isEmpty(suffix))
             suffix = "::" + suffix;
         else
             suffix = "";

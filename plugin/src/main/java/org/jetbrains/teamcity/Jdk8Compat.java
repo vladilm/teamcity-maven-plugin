@@ -23,8 +23,8 @@ public final class Jdk8Compat {
         }
     }
 
-    public static boolean isBlank(String s) {
-        return s == null || s.length() == 0;
+    public static boolean isEmpty(String s) {
+        return s == null || s.isEmpty();
     }
 
     public static Path ofPath(String first, String... more) {
