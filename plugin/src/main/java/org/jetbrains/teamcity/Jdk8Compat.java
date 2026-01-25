@@ -1,9 +1,7 @@
 package org.jetbrains.teamcity;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.file.FileSystems;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -32,20 +30,16 @@ public final class Jdk8Compat {
         return FileSystems.getDefault().getPath(first, more);
     }
 
-    public static <K, V> Map<K,V> ofMap(K create, V aTrue) {
+    public static <K, V> Map<K,V> ofMap(K k1, V v1) {
         HashMap<K, V> m = new HashMap<>();
-        m.put(create, aTrue);
+        m.put(k1, v1);
         return m;
     }
 
-    public static <K, V> Map<K,V> ofMap(K create, V aTrue, K create1, V aTrue1) {
+    public static <K, V> Map<K,V> ofMap(K k1, V v1, K k2, V v2) {
         HashMap<K, V> m = new HashMap<>();
-        m.put(create, aTrue);
-        m.put(create1, aTrue1);
+        m.put(k1, v1);
+        m.put(k2, v2);
         return m;
-    }
-
-    public static void writeStringToFile(Path path, byte[] arr) throws IOException {
-        Files.write(path, arr);
     }
 }

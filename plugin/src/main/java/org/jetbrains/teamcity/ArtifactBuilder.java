@@ -2,6 +2,7 @@ package org.jetbrains.teamcity;
 
 import lombok.Data;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.output.UnsynchronizedByteArrayOutputStream;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
 import org.jetbrains.teamcity.agent.*;
@@ -18,10 +19,9 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,7 +64,7 @@ public class ArtifactBuilder {
         for (PathSet ps: ac.getPaths()) {
             ArtifactNode location = getArtifactNode(root, ps);
             for (PathEntry pe: ps.getPathEntryList()) {
-                ArtifactNode.ArtifactNodeType type = FILE;
+                ArtifactNode.ArtifactNodeType type;
                 if (pe instanceof DependencyPathEntry) {
                     type = DEPENDENCY;
                 } else if (pe instanceof FilePathEntry) {
@@ -75,6 +75,8 @@ public class ArtifactBuilder {
                     type = ARTIFACT;
                 } else if (pe instanceof CompressedPathEntry) {
                     type = COMPRESSED_FILE;
+                } else {
+                    type = FILE;
                 }
                 location.getChilds().add(new ArtifactNode(pe.getName(), type, pe));
             }
@@ -108,11 +110,10 @@ public class ArtifactBuilder {
         aRoot.setAttribute("id", "root");
         artifact.appendChild(aRoot);
         genTree(doc, aRoot, root, params.getProjectRoot());
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        UnsynchronizedByteArrayOutputStream baos = new UnsynchronizedByteArrayOutputStream.Builder().get();
         writeXml(doc, baos);
         baos.close();
-        String xmlContent = baos.toString(StandardCharsets.UTF_8.name());
-        Jdk8Compat.writeStringToFile(destinationFile, baos.toByteArray());
+        Files.write(destinationFile, baos.toByteArray());
     }
 
     private static void writeXml(Document doc,
