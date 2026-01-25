@@ -7,13 +7,10 @@ import org.apache.maven.archiver.MavenArchiveConfiguration;
 import org.apache.maven.archiver.MavenArchiver;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.artifact.factory.ArtifactFactory;
 import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
@@ -39,7 +36,6 @@ import org.codehaus.plexus.archiver.jar.JarArchiver;
 import org.codehaus.plexus.archiver.manager.ArchiverManager;
 import org.codehaus.plexus.archiver.manager.NoSuchArchiverException;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.jetbrains.teamcity.*;
 import org.jetbrains.teamcity.data.ResolvedArtifact;
 import org.jetbrains.teamcity.velocity.NullTool;
@@ -48,16 +44,16 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.FileSystem;
 import java.nio.file.*;
+import java.nio.file.FileSystem;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.maven.artifact.ArtifactUtils.key;
-import static org.jetbrains.teamcity.agent.AgentPluginWorkflow.TEAMCITY_AGENT_PLUGIN_CLASSIFIER;
 import static org.jetbrains.teamcity.ServerPluginWorkflow.TEAMCITY_PLUGIN_CLASSIFIER;
+import static org.jetbrains.teamcity.agent.AgentPluginWorkflow.TEAMCITY_AGENT_PLUGIN_CLASSIFIER;
 
 @Data
 public class WorkflowUtil {

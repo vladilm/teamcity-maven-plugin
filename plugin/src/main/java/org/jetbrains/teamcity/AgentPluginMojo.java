@@ -12,10 +12,8 @@ import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.jetbrains.teamcity.agent.AgentPluginWorkflow;
 import org.jetbrains.teamcity.agent.WorkflowUtil;
 
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 
 @Mojo(name = "build-agent", defaultPhase = LifecyclePhase.PACKAGE,

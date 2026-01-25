@@ -24,10 +24,13 @@ import org.codehaus.plexus.archiver.manager.ArchiverManager;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.jetbrains.teamcity.agent.*;
+import org.jetbrains.teamcity.agent.ResolveUtil;
+import org.jetbrains.teamcity.agent.ResultArtifact;
+import org.jetbrains.teamcity.agent.WorkflowUtil;
 
-
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.List;
 
 import static org.apache.maven.artifact.Artifact.SCOPE_RUNTIME;

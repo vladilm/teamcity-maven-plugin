@@ -11,9 +11,7 @@ import org.jetbrains.teamcity.Jdk8Compat;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.Map;
 
 public class ArtifactContext extends VelocityContext {
     private final String template = "artifact.vm";

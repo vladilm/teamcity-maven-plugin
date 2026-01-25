@@ -2,7 +2,6 @@ package org.jetbrains.teamcity.data;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.eclipse.aether.artifact.Artifact;
-import org.jetbrains.teamcity.AssemblePluginMojo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

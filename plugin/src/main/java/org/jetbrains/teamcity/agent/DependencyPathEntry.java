@@ -1,7 +1,6 @@
 package org.jetbrains.teamcity.agent;
 
 import lombok.Data;
-import lombok.Getter;
 import org.apache.maven.artifact.Artifact;
 import org.jetbrains.teamcity.Jdk8Compat;
 

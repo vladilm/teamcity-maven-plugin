@@ -1,7 +1,5 @@
 package org.jetbrains.teamcity.agent;
 
-import lombok.Data;
-
 import java.nio.file.Path;
 import java.util.List;
 

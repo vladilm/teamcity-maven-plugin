@@ -2,33 +2,30 @@ package org.jetbrains.teamcity;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.maven.archiver.MavenArchiveConfiguration;
-import org.apache.maven.archiver.MavenArchiver;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.lifecycle.LifeCyclePluginAnalyzer;
 import org.apache.maven.lifecycle.LifecycleExecutor;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.PluginExecution;
-import org.apache.maven.plugin.*;
+import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.PluginManager;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugins.annotations.*;
-import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.project.MavenProjectHelper;
-import org.apache.maven.shared.dependency.graph.*;
-import org.codehaus.plexus.archiver.manager.NoSuchArchiverException;
+import org.apache.maven.shared.dependency.graph.DependencyGraphBuilder;
+import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
-import org.codehaus.plexus.archiver.Archiver;
-import org.codehaus.plexus.archiver.FileSet;
-import org.codehaus.plexus.archiver.jar.JarArchiver;
-import org.codehaus.plexus.archiver.manager.ArchiverManager;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.jetbrains.teamcity.agent.*;
+import org.jetbrains.teamcity.agent.AgentPluginWorkflow;
+import org.jetbrains.teamcity.agent.WorkflowUtil;
 
-import java.io.*;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Mojo(name = "build", defaultPhase = LifecyclePhase.PACKAGE, aggregator = false, requiresProject = true, requiresDependencyResolution = ResolutionScope.TEST, requiresDependencyCollection = ResolutionScope.TEST)
 public class AssemblePluginMojo extends BaseTeamCityMojo {

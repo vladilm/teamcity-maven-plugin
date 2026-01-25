@@ -19,11 +19,11 @@ package org.jetbrains.teamcity;
  * under the License.
  */
 
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.apache.maven.shared.dependency.graph.filter.DependencyNodeFilter;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A dependency node filter than only accepts nodes that are ancestors of, or equal to, a given list of nodes.
