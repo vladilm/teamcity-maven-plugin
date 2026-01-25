@@ -55,7 +55,7 @@ public class AgentPluginMojo extends BaseTeamCityMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().warn("TeamCity Agent Assemble start");
+        getLog().info("TeamCity Agent Assemble start");
         try {
             WorkflowUtil util = getWorkflowUtil();
             Agent agent = new Agent(spec, pluginName, intellijProjectPath, exclusions, tool, failOnMissingDependencies, ignoreExtraFilesIn, descriptor, getProject().getArtifactId(), extras);

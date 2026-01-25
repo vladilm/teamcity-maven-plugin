@@ -93,7 +93,7 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().warn("TeamCityAssemble start");
+        getLog().info("TeamCity Assemble start");
         setDefaultconfigurationValues(pluginVersion);
         try {
 
