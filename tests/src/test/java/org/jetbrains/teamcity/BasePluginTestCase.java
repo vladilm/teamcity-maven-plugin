@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -170,7 +171,9 @@ public abstract class BasePluginTestCase {
     protected void appendTestResult(StringJoiner sb, AgentPluginWorkflow apw) throws IOException {
         if (apw.getAgentPath() != null) {
             sb.add("AGENT:");
-            Files.walk(apw.getAgentPath()).skip(1).sorted().forEachOrdered(it -> sb.add(apw.getAgentPath().relativize(it).toString()));
+            try(Stream<Path> stream = Files.walk(apw.getAgentPath())) {
+                stream.skip(1).sorted().forEachOrdered(it -> sb.add(apw.getAgentPath().relativize(it).toString()));
+            }
         }
     }
 

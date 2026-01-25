@@ -136,14 +136,16 @@ public class WorkflowUtil {
 
     public void removeOtherFiles(List<String> ignoreExtraFilesIn, Path toPath, List<Path> destinations) {
         try {
-            List<Path> existingFiles = Files.walk(toPath)
-                    .filter(it -> !it.equals(toPath))
-                    .filter(it -> !destinations.contains(it))
-                    .filter(it -> shouldRemove(ignoreExtraFilesIn, toPath, it))
-                    .collect(Collectors.toList());
-            if (!existingFiles.isEmpty()) {
-                getLog().warn("Found extra files in " + toPath + " removing (" + existingFiles + ")");
-                existingFiles.forEach(it -> it.toFile().delete());
+            try (Stream<Path> stream = Files.walk(toPath)) {
+                List<Path> existingFiles = stream
+                        .filter(it -> !it.equals(toPath))
+                        .filter(it -> !destinations.contains(it))
+                        .filter(it -> shouldRemove(ignoreExtraFilesIn, toPath, it))
+                        .collect(Collectors.toList());
+                if (!existingFiles.isEmpty()) {
+                    getLog().warn("Found extra files in " + toPath + " removing (" + existingFiles + ")");
+                    existingFiles.forEach(it -> it.toFile().delete());
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -418,18 +420,23 @@ public class WorkflowUtil {
             }
 
             URI uri = new URI("jar", zipPath.toUri().toString(), null);
-            Optional<Path> largeFiles = Files.walk(source).filter(it -> it.toFile().length() > 50 * 1024 * 1024).findFirst();
-            Map<String, Object> env = largeFiles.isPresent() ? Jdk8Compat.ofMap("create", "true", "useTempFile", Boolean.TRUE) : Jdk8Compat.ofMap("create", "true");
+            boolean hasLargeFiles;
+            try (Stream<Path> stream = Files.walk(source)) {
+                hasLargeFiles = stream.anyMatch(it -> it.toFile().length() > 50 * 1024 * 1024);
+            }
+            Map<String, Object> env = hasLargeFiles ? Jdk8Compat.ofMap("create", "true", "useTempFile", "true") : Jdk8Compat.ofMap("create", "true");
             try (FileSystem zipfs = FileSystems.newFileSystem(uri, env)) {
-                List<Path> filesInAgentZip = Files.walk(source).collect(Collectors.toList());
-                for (Path entry : filesInAgentZip) {
-                    Path relativePath = zipfs.getPath(source.relativize(entry).toString());
-                    try {
-                        if (Jdk8Compat.isNotEmpty(relativePath.toString())) {
-                            Files.copy(entry, relativePath);
+                try (Stream<Path> stream = Files.walk(source)) {
+                    List<Path> filesInAgentZip = stream.collect(Collectors.toList());
+                    for (Path entry : filesInAgentZip) {
+                        Path relativePath = zipfs.getPath(source.relativize(entry).toString());
+                        try {
+                            if (Jdk8Compat.isNotEmpty(relativePath.toString())) {
+                                Files.copy(entry, relativePath);
+                            }
+                        } catch (IOException e) {
+                            getLog().warn("Can't zip file " + entry + " to " + relativePath, e);
                         }
-                    } catch (IOException e) {
-                        getLog().warn("Can't zip file " + entry + " to " + relativePath, e);
                     }
                 }
             }
@@ -533,7 +540,9 @@ public class WorkflowUtil {
 
     public List<Path> findPathsInRelativeTo(Path source, Path dest) {
         try {
-            return  Files.walk(source).map(it -> source.relativize(it)).map(it -> dest.resolve(it)).collect(Collectors.toList());
+            try(Stream<Path> stream = Files.walk(source)) {
+                return stream.map(source::relativize).map(dest::resolve).collect(Collectors.toList());
+            }
         } catch (IOException e) {
             getLog().warn("Can't process files in " + source + " relative to " + dest, e);
             return Collections.emptyList();

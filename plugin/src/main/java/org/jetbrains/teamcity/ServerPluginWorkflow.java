@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.jetbrains.teamcity.agent.AgentPluginWorkflow.TEAMCITY_AGENT_PLUGIN_CLASSIFIER;
@@ -195,7 +196,7 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
             return parameters.getBuildServerResources();
         } else {
             if (!webappPaths.isEmpty()) {
-                return webappPaths.stream().map(it -> util.absOrProject(it).resolve("plugins").resolve(parameters.getPluginName())).filter(it->it.toFile().exists()).map(it -> it.toString()).collect(Collectors.toList());
+                return webappPaths.stream().map(it -> util.absOrProject(it).resolve("plugins").resolve(parameters.getPluginName())).filter(it -> it.toFile().exists()).map(Path::toString).collect(Collectors.toList());
             }
         }
         return Collections.emptyList();
@@ -262,17 +263,9 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
             Path kotlinDslPath = util.createDir(serverPluginRoot.resolve("kotlin-dsl"));
             assemblyContext.getPaths().add(new PathSet(kotlinDslPath).with(new DirCopyPathEntry(parameters.getKotlinDslDescriptorsPath().toPath())));
             try {
-                Files.walk(parameters.getKotlinDslDescriptorsPath().toPath()).forEach(it -> {
-                    try {
-                        if (it.toFile().isFile()) {
-                            Path target = kotlinDslPath.resolve(it.getFileName());
-                            destinations.add(target);
-                            Files.copy(it, target, REPLACE_EXISTING);
-                        }
-                    } catch (IOException e) {
-                        util.getLog().warn("Can't copy " + it + " to " + kotlinDslPath, e);
-                    }
-                });
+                try (Stream<Path> stream = Files.walk(parameters.getKotlinDslDescriptorsPath().toPath())) {
+                    stream.forEach(it -> copyTo(it, kotlinDslPath, destinations));
+                }
             } catch (IOException e) {
                 util.getLog().warn("Can't copy " + parameters.getKotlinDslDescriptorsPath() + " to " + kotlinDslPath);
             }
@@ -284,6 +277,18 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
         return destinations;
     }
 
+    private void copyTo(Path it, Path targetDir, List<Path> destinations) {
+        try {
+            if (Files.isRegularFile(it)) {
+                Path target = targetDir.resolve(it.getFileName());
+                destinations.add(target);
+                Files.copy(it, target, REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            util.getLog().warn("Can't copy " + it + " to " + targetDir, e);
+        }
+    }
+
     private List<Path> assembleUiSchemas(AssemblyContext assemblyContext, Path serverPluginRoot) {
         List<Path> destinations = new ArrayList<>();
         if (!parameters.getUiSchemasPath().isDirectory()) {
@@ -292,17 +297,9 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
         Path uiSchemasPath = util.createDir(serverPluginRoot.resolve("ui-schemas"));
         assemblyContext.getPaths().add(new PathSet(uiSchemasPath).with(new DirCopyPathEntry(parameters.getUiSchemasPath().toPath())));
         try {
-            Files.walk(parameters.getUiSchemasPath().toPath()).forEach(it -> {
-                try {
-                    if (it.toFile().isFile()) {
-                        Path target = uiSchemasPath.resolve(it.getFileName());
-                        destinations.add(target);
-                        Files.copy(it, target, REPLACE_EXISTING);
-                    }
-                } catch (IOException e) {
-                    util.getLog().warn("Can't copy " + it + " to " + uiSchemasPath, e);
-                }
-            });
+            try (Stream<Path> stream = Files.walk(parameters.getUiSchemasPath().toPath())) {
+                stream.forEach(it -> copyTo(it, uiSchemasPath, destinations));
+            }
         } catch (IOException e) {
             util.getLog().warn("Can't copy " + parameters.getUiSchemasPath() + " to " + uiSchemasPath);
         }
