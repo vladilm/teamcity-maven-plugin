@@ -110,7 +110,7 @@ public class WorkflowUtil {
         }
     }
 
-    public Pair<List<ResolvedArtifact>,List<Path>>  copyTransitiveDependenciesInto(boolean failOnMissingDependencies, AssemblyContext assemblyContext, List<Artifact> nodes, Path toPath) throws MojoExecutionException {
+    public Pair<List<ResolvedArtifact>,List<Path>>  copyTransitiveDependenciesInto(boolean failOnMissingDependencies, boolean removeVersionFromJar, AssemblyContext assemblyContext, List<Artifact> nodes, Path toPath) throws MojoExecutionException {
         List<Path> destinations = new ArrayList<>();
         List<ResolvedArtifact> result = new ArrayList<>();
         for (Artifact node : nodes) {
@@ -121,7 +121,7 @@ public class WorkflowUtil {
             org.eclipse.aether.artifact.Artifact source = resolve.resolve(alternativeArtifact);
             ResolvedArtifact ra = new ResolvedArtifact(source, isReactorProject(node));
             result.add(ra);
-            String name = ra.getFileName();
+            String name = ra.getFileName(removeVersionFromJar);
             Path destination = toPath.resolve(name);
             destinations.add(destination);
             assemblyContext.addToLastPathSet(new DependencyPathEntry(node, ra.isReactorProject(), destination.getFileName().toString(), source.getFile().toPath()));
@@ -447,7 +447,7 @@ public class WorkflowUtil {
         }
     }
 
-    public Pair<List<ResolvedArtifact>,List<Path>> copyDependenciesInto(AssemblyContext assemblyContext, boolean failOnMissingDependencies, List<Dependency> nodes, Path toPath) throws MojoExecutionException {
+    public Pair<List<ResolvedArtifact>,List<Path>> copyDependenciesInto(AssemblyContext assemblyContext, boolean failOnMissingDependencies, boolean removeVersionFromJar, List<Dependency> nodes, Path toPath) throws MojoExecutionException {
         assemblyContext.getPaths().add(new PathSet(toPath));
         List<Path> destinations = new ArrayList<>();
         List<ResolvedArtifact> result = new ArrayList<>();
@@ -455,7 +455,7 @@ public class WorkflowUtil {
             Artifact a = artifactFactory.createArtifactWithClassifier(node.getGroupId(), node.getArtifactId(), node.getVersion(), node.getType(), node.getClassifier());
             org.eclipse.aether.artifact.Artifact source = resolve.resolve(a);
             ResolvedArtifact ra = new ResolvedArtifact(source, isReactorProject(a));
-            String name = ra.getFileName();
+            String name = ra.getFileName(removeVersionFromJar);
             Path destination = toPath.resolve(name);
             destinations.add(destination);
             try {
@@ -500,7 +500,7 @@ public class WorkflowUtil {
         return results;
     }
 
-    public void processExtras(List<SourceDest> extras, Path destinationRoot, AssemblyContext assemblyContext, List<Path> destinations) {
+    public void processExtras(List<SourceDest> extras, boolean removeVersionFromJar, Path destinationRoot, AssemblyContext assemblyContext, List<Path> destinations) {
         for (SourceDest extra : extras) {
             Path source = absOrProject(extra.getSource());
             if (source.toFile().exists()) {
@@ -512,8 +512,9 @@ public class WorkflowUtil {
                 }
                 assemblyContext.getPaths().add(new PathSet(dest));
                 if (source.toFile().isFile()) {
-                    assemblyContext.addToLastPathSet(new FilePathEntry(extra.getDestName(), source));
-                    Path fullPath = (extra.hasDestName()) ? dest.resolve(extra.getDestName()) : dest.resolve(source.getFileName());
+                    String destinationFileName = getExtraDestinationFileName(extra, source, removeVersionFromJar);
+                    assemblyContext.addToLastPathSet(new FilePathEntry(destinationFileName, source));
+                    Path fullPath = dest.resolve(destinationFileName);
                     destinations.add(fullPath);
                     try {
                         FileUtils.copyFile(source.toFile(), fullPath.toFile());
@@ -536,6 +537,30 @@ public class WorkflowUtil {
             }
         }
 
+    }
+
+    private String getExtraDestinationFileName(SourceDest extra, Path source, boolean removeVersionFromJar) {
+        if (extra.hasDestName()) {
+            return extra.getDestName();
+        }
+        String fileName = source.getFileName().toString();
+        return removeVersionFromJar ? stripVersionFromJarName(fileName) : fileName;
+    }
+
+    private String stripVersionFromJarName(String fileName) {
+        if (!fileName.endsWith(".jar")) {
+            return fileName;
+        }
+        String baseName = fileName.substring(0, fileName.length() - 4);
+        String[] parts = baseName.split("-");
+        for (int i = parts.length - 1; i >= 0; i--) {
+            if (!parts[i].isEmpty() && Character.isDigit(parts[i].charAt(0))) {
+                String normalized = Stream.concat(Arrays.stream(parts).limit(i), Arrays.stream(parts).skip(i + 1))
+                    .collect(Collectors.joining("-"));
+                return normalized.isEmpty() ? fileName : normalized + ".jar";
+            }
+        }
+        return fileName;
     }
 
     public List<Path> findPathsInRelativeTo(Path source, Path dest) {

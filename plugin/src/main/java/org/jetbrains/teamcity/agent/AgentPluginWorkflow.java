@@ -77,7 +77,7 @@ public class AgentPluginWorkflow implements ArtifactListProvider {
         Path agentLibPath = util.createDir(parameters.isTool() ?  agentPath : agentPath.resolve("lib"));
         assemblyContext.getPaths().add(new PathSet(agentLibPath));
         List<Artifact> nodes = util.getDependencyNodeList(rootNode, parameters.getSpec(), parameters.getExclusions());
-        Pair<List<ResolvedArtifact>, List<Path>> artifacts = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), assemblyContext, nodes, agentLibPath);
+        Pair<List<ResolvedArtifact>, List<Path>> artifacts = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), parameters.isRemoveVersionFromJar(), assemblyContext, nodes, agentLibPath);
         List<Path> destinations = new ArrayList<>(artifacts.getRight());
 
         if (!nodes.isEmpty()) {
@@ -107,7 +107,7 @@ public class AgentPluginWorkflow implements ArtifactListProvider {
             assemblyContext.getPaths().add(new PathSet(agentPath).with(new FilePathEntry(TEAMCITY_PLUGIN_XML, targetDescriptorPath.toPath()))); // add it anyway if it exists or not
 
             if (parameters.hasExtras()) {
-                util.processExtras(parameters.getExtras(), agentPath, assemblyContext, destinations);
+                util.processExtras(parameters.getExtras(), parameters.isRemoveVersionFromJar(), agentPath, assemblyContext, destinations);
             }
 
             Path agentPluginPath = workDirectory.resolve("agent");

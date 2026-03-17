@@ -45,6 +45,8 @@ public class Server {
     private List<SourceDest> extras;
     @Parameter(defaultValue = "false")
     private boolean requireKotlinDsl;
+    @Parameter(defaultValue = "false")
+    private boolean removeVersionFromJar;
 
     public void setDefaultValues(String spec, MavenProject project, File projectBuildOutputDirectory, String pluginVersion) {
         if (Objects.isNull(this.spec)) {

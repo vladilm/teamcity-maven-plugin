@@ -28,6 +28,8 @@ public class Agent {
     private boolean failOnMissingDependencies = true;
     @Parameter
     private List<String> ignoreExtraFilesIn;
+    @Parameter(defaultValue = "false")
+    private boolean removeVersionFromJar;
 
     private Descriptor descriptor = new Descriptor();
 

@@ -33,6 +33,10 @@ public class ResolvedArtifact {
     private static final String AgentPluginNameKey = "AGENT_PLUGIN_NAME";
 
     public String getFileName() {
+        return getFileName(false);
+    }
+
+    public String getFileName(boolean removeVersionFromJar) {
         File sourceFile = source.getFile();
         String name = sourceFile.getName();
         if (Objects.equals("teamcity-agent-plugin", source.getClassifier())) {
@@ -65,6 +69,12 @@ public class ResolvedArtifact {
             } catch (IOException e) {
                 LOG.warn("Error while fetching agent plugin name of {}", sourceFile, e);
             }
+        }
+        if (removeVersionFromJar && "jar".equalsIgnoreCase(source.getExtension())) {
+            if (Jdk8Compat.isNotEmpty(source.getClassifier())) {
+                return source.getArtifactId() + "-" + source.getClassifier() + "." + source.getExtension();
+            }
+            return source.getArtifactId() + "." + source.getExtension();
         }
         return name;
     }

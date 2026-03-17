@@ -44,6 +44,8 @@ public class AgentPluginMojo extends BaseTeamCityMojo {
     private boolean createIdeaArtifacts = false;
     @Parameter
     private List<String> ignoreExtraFilesIn;
+    @Parameter(defaultValue = "false")
+    private boolean removeVersionFromJar;
 
     @Parameter(defaultValue = "${project.build.outputDirectory}/META-INF/teamcity-agent-plugin.xml")
     private File descriptorPath;
@@ -62,7 +64,7 @@ public class AgentPluginMojo extends BaseTeamCityMojo {
         getLog().info("TeamCity Agent Assemble start");
         try {
             WorkflowUtil util = getWorkflowUtil();
-            Agent agent = new Agent(spec, pluginName, intellijProjectPath, exclusions, tool, failOnMissingDependencies, ignoreExtraFilesIn, descriptor, getProject().getArtifactId(), extras);
+            Agent agent = new Agent(spec, pluginName, intellijProjectPath, exclusions, tool, failOnMissingDependencies, ignoreExtraFilesIn, removeVersionFromJar, descriptor, getProject().getArtifactId(), extras);
             agent.setDefaultValues(".", getProject(), getProjectBuildOutputDirectory(), pluginVersion);
             DependencyNode rootNode = findRootNode(util);
             agentPluginWorkflow = new AgentPluginWorkflow(rootNode, agent, util, getWorkDirectory().toPath(), isCreateIdeaArtifacts());

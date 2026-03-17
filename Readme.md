@@ -28,6 +28,7 @@ Key concepts
 - pluginName: The name of your plugin. By default, it is ${project.artifactId}.
 - buildServerResources: Path to your plugin’s server-side resources (JSPs, static files). This path usually ends with the plugin name directory inside src/main/webapp/plugins.
 - descriptor: Options controlling the TeamCity plugin descriptor. See org.jetbrains.teamcity.Descriptor in sources for full details.
+- removeVersionFromJar: Optional boolean for `<agent>` and `<server>`. When `true`, every JAR copied by that workflow is renamed from `artifactId-version[-classifier].jar` to `artifactId[-classifier].jar`.
 
 Quick start: package an agent plugin
 -----------------------------------
@@ -55,6 +56,7 @@ Example POM fragment for an agent-side wrapper module that packages an existing 
           <spec>:my-agent-plugin</spec> <!-- Reference to an agent plugin module; if omitted, current project is used -->
           <!-- By default, pluginName is ${project.artifactId} -->
           <pluginName>myPlugin</pluginName>
+          <removeVersionFromJar>true</removeVersionFromJar>
           <descriptor>
             <!-- See org.jetbrains.teamcity.Descriptor for all available options -->
             <useSeparateClassloader>true</useSeparateClassloader>
@@ -93,6 +95,7 @@ Example for a WAR-based webapp that packages server-side classes/resources and o
           <spec>somegroup:my-server-plugin</spec>
           <!-- By default, pluginName is ${project.artifactId} -->
           <pluginName>myPlugin</pluginName>
+          <removeVersionFromJar>true</removeVersionFromJar>
           <descriptor>
             <!-- See org.jetbrains.teamcity.Descriptor for all available options -->
             <nodeResponsibilitiesAware>true</nodeResponsibilitiesAware>

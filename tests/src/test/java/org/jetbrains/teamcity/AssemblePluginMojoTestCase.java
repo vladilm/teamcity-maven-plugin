@@ -77,6 +77,23 @@ public class AssemblePluginMojoTestCase extends BasePluginTestCase {
     }
 
     @Test
+    public void testMakeAgentArtifactWithoutVersionInJarNames() throws Exception {
+        MavenSession session = initMavenSession("unit/module-war/module-agent");
+        MojoExecution execution = rule.newMojoExecution("build");
+        AssemblePluginMojo mojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(session, execution);
+        mojo.setFailOnMissingDependencies(false);
+        mojo.getAgent().setRemoveVersionFromJar(true);
+        mojo.execute();
+
+        StringJoiner sb = new StringJoiner("\n");
+        appendTestResult(sb, mojo.getAgentPluginWorkflow());
+        Assert.assertEquals("AGENT:\n" +
+                "lib\n" +
+                "lib/module-agent.jar\n" +
+                "teamcity-plugin.xml", sb.toString());
+    }
+
+    @Test
     public void testMakeSimpleArtifact() throws Exception {
         MavenSession session = initMavenSession("unit/project-to-test");
         MojoExecution execution = rule.newMojoExecution("build");
@@ -242,6 +259,23 @@ public class AssemblePluginMojoTestCase extends BasePluginTestCase {
                     </artifact>
                 </component>
                 """);
+    }
+
+    @Test
+    public void testMakeSimpleServerArtifactWithoutVersionInJarNames() throws Exception {
+        MavenSession session = initMavenSession("unit/server-jar-simple");
+        MojoExecution execution = rule.newMojoExecution("build");
+        AssemblePluginMojo mojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(session, execution);
+        mojo.setFailOnMissingDependencies(false);
+        mojo.getServer().setRemoveVersionFromJar(true);
+        mojo.execute();
+
+        String sb = getTestResult(mojo);
+        assertThat(sb).asString().isEqualToIgnoringNewLines("SERVER:\n" +
+                "agent/\n" +
+                "server/\n" +
+                "server/server-jar-simple.jar\n" +
+                "teamcity-plugin.xml");
     }
 
     @Test

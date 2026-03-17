@@ -126,7 +126,7 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
         List<Artifact> nodes = util.getDependencyNodeList(rootNode, parameters.getSpec(), exclusions);
         Map<Boolean, List<Artifact>> dependencies = nodes.stream().collect(Collectors.partitioningBy(it -> "teamcity-agent-plugin".equalsIgnoreCase(it.getClassifier())));
         assemblyContext.getPaths().add(new PathSet(serverPath));
-        Pair<List<ResolvedArtifact>, List<Path>> copyResults = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), assemblyContext, dependencies.get(Boolean.FALSE), serverPath);
+        Pair<List<ResolvedArtifact>, List<Path>> copyResults = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), parameters.isRemoveVersionFromJar(), assemblyContext, dependencies.get(Boolean.FALSE), serverPath);
         List<Path> createdDestinations = new ArrayList<>(copyResults.getRight());
         if (!getBuildServerResources().isEmpty()) {
             String classifier = "teamcity-plugin-resources";
@@ -166,11 +166,11 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
             assemblyContext.getPaths().add(new PathSet(serverPluginRoot.resolve("common")));
             Path commonPath = util.createDir(serverPluginRoot.resolve("common"));
             List<Artifact> commonNodes = util.getDependencyNodeList(rootNode, parameters.getCommonSpec(), parameters.getCommonExclusions());
-            Pair<List<ResolvedArtifact>, List<Path>> copyResults1 = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), assemblyContext, commonNodes, commonPath);
+            Pair<List<ResolvedArtifact>, List<Path>> copyResults1 = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), parameters.isRemoveVersionFromJar(), assemblyContext, commonNodes, commonPath);
             createdDestinations.addAll(copyResults1.getRight());
         }
         if (parameters.hasExtras()) {
-            util.processExtras(parameters.getExtras(), serverPluginRoot, assemblyContext, createdDestinations);
+            util.processExtras(parameters.getExtras(), parameters.isRemoveVersionFromJar(), serverPluginRoot, assemblyContext, createdDestinations);
         }
 
         Path agentPluginRoot = util.createDir(serverPluginRoot.resolve(AGENT_SUBDIR));
@@ -232,14 +232,14 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
         List<Path> explicitDestinations = new ArrayList<>();
         if (agentPluginDependencies != null && !agentPluginDependencies.isEmpty()) {
             Path agentPath = util.createDir(serverPluginRoot.resolve(AGENT_SUBDIR));
-            Pair<List<ResolvedArtifact>, List<Path>> copyResults = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), assemblyContext, agentPluginDependencies, agentPath);
+            Pair<List<ResolvedArtifact>, List<Path>> copyResults = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), parameters.isRemoveVersionFromJar(), assemblyContext, agentPluginDependencies, agentPath);
             explicitDestinations.addAll(copyResults.getRight());
         }
 
         List<Dependency> agentDependencies = pluginDependencies.stream().filter(it -> TEAMCITY_AGENT_PLUGIN_CLASSIFIER.equalsIgnoreCase(it.getClassifier())).collect(Collectors.toList());
         if (!agentDependencies.isEmpty()) {
             Path agentPath = util.createDir(serverPluginRoot.resolve(AGENT_SUBDIR));
-            Pair<List<ResolvedArtifact>, List<Path>> copyResults = util.copyDependenciesInto(assemblyContext, parameters.isFailOnMissingDependencies(), agentDependencies, agentPath);
+            Pair<List<ResolvedArtifact>, List<Path>> copyResults = util.copyDependenciesInto(assemblyContext, parameters.isFailOnMissingDependencies(), parameters.isRemoveVersionFromJar(), agentDependencies, agentPath);
             explicitDestinations.addAll(copyResults.getRight());
         }
         return explicitDestinations;
@@ -251,7 +251,7 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
         List<Dependency> bundledDependencies = pluginDependencies.stream().filter(it -> TEAMCITY_TOOL_CLASSIFIER.equalsIgnoreCase(it.getClassifier())).collect(Collectors.toList());
         if (!bundledDependencies.isEmpty()) {
             Path bundledPath = util.createDir(serverPluginRoot.resolve(BUNDLED_SUBDIR));
-            Pair<List<ResolvedArtifact>, List<Path>> copyResults = util.copyDependenciesInto(assemblyContext, parameters.isFailOnMissingDependencies(), bundledDependencies, bundledPath);
+            Pair<List<ResolvedArtifact>, List<Path>> copyResults = util.copyDependenciesInto(assemblyContext, parameters.isFailOnMissingDependencies(), parameters.isRemoveVersionFromJar(), bundledDependencies, bundledPath);
             explicitDestinations.addAll(copyResults.getRight());
         }
         return explicitDestinations;
