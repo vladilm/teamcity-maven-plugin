@@ -20,9 +20,12 @@ import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.jetbrains.teamcity.agent.AgentPluginWorkflow;
+import org.jetbrains.teamcity.agent.ResultArtifact;
 import org.jetbrains.teamcity.agent.WorkflowUtil;
+import org.jetbrains.teamcity.incremental.IncrementalState;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -98,12 +101,38 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
     private AgentPluginWorkflow agentPluginWorkflow;
     @Getter
     private ServerPluginWorkflow serverPluginWorkflow;
+    @Parameter(property = "teamcity.assemble.incremental", defaultValue = "false")
+    private boolean incremental;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         getLog().info("TeamCity Assemble start");
         setDefaultconfigurationValues(pluginVersion);
         try {
+            IncrementalAssembleSupport incrementalSupport = new IncrementalAssembleSupport(
+                    getProject(),
+                    getSession(),
+                    getWorkDirectory().toPath(),
+                    getProjectBuildOutputDirectory(),
+                    agent,
+                    server,
+                    execution,
+                    createIdeaArtifacts,
+                    includes,
+                    excludes,
+                    ignoreExtraFilesIn
+            );
+            IncrementalState currentState = incrementalSupport.collectCurrentState();
+            IncrementalState previousState = incrementalSupport.loadState();
+            if (incremental) {
+                boolean upToDate = incrementalSupport.isUpToDate(previousState, currentState);
+                if (upToDate) {
+                    getLog().info("TeamCity Assemble is up-to-date, skipping");
+                    attachArtifacts(incrementalSupport.restoreAttachedArtifacts(previousState));
+                    return;
+                }
+                getLog().info("TeamCity Assemble incremental miss: " + incrementalSupport.describeDifference(previousState, currentState));
+            }
 
             WorkflowUtil util = getWorkflowUtil();
             DependencyNode rootNode = findRootNode(util);
@@ -118,6 +147,11 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
             findPluginConfiguration().ifPresent(plugin -> serverPluginWorkflow.getPluginDependencies().addAll(plugin.getDependencies()));
             serverPluginWorkflow.execute();
             attachArtifacts(serverPluginWorkflow.getAttachedArtifacts());
+
+            List<ResultArtifact> attachedArtifacts = new ArrayList<ResultArtifact>();
+            attachedArtifacts.addAll(agentPluginWorkflow.getAttachedArtifacts());
+            attachedArtifacts.addAll(serverPluginWorkflow.getAttachedArtifacts());
+            incrementalSupport.saveState(currentState.withOutputs(attachedArtifacts));
 
         } catch (IOException e) {
             getLog().warn(e);
