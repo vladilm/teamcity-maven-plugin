@@ -6,6 +6,7 @@ import org.apache.maven.project.MavenProject;
 import org.jetbrains.teamcity.agent.ResultArtifact;
 import org.jetbrains.teamcity.incremental.FileSnapshotter;
 import org.jetbrains.teamcity.incremental.IncrementalAssembleCore;
+import org.jetbrains.teamcity.incremental.IncrementalCheckResult;
 import org.jetbrains.teamcity.incremental.IncrementalState;
 import org.jetbrains.teamcity.incremental.IncrementalStateStore;
 import org.jetbrains.teamcity.incremental.MavenIncrementalInputsCollector;
@@ -31,7 +32,8 @@ public class IncrementalAssembleSupport {
                                       boolean createIdeaArtifacts,
                                       String includes,
                                       String excludes,
-                                      String ignoreExtraFilesIn) {
+                                      String ignoreExtraFilesIn,
+                                      String incrementalSnapshotExcludes) {
         this.core = new IncrementalAssembleCore();
         this.stateStore = new IncrementalStateStore(workDirectory.resolve(".assemble-state.properties"));
         this.inputsCollector = new MavenIncrementalInputsCollector(
@@ -46,13 +48,18 @@ public class IncrementalAssembleSupport {
                 includes,
                 excludes,
                 ignoreExtraFilesIn,
-                new FileSnapshotter(),
+                incrementalSnapshotExcludes,
+                new FileSnapshotter(incrementalSnapshotExcludes),
                 new IncrementalStateStore()
         );
     }
 
     public IncrementalState collectCurrentState() throws IOException {
         return inputsCollector.collectCurrentState();
+    }
+
+    public IncrementalCheckResult checkCurrentState(IncrementalState previous) throws IOException {
+        return inputsCollector.checkCurrentState(previous);
     }
 
     public IncrementalState loadState() throws IOException {

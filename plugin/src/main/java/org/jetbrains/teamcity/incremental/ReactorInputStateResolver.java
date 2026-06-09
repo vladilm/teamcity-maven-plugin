@@ -67,8 +67,13 @@ public class ReactorInputStateResolver {
         InputState state = new InputState();
         state.setKind(KIND_EXTERNAL_SNAPSHOT_ARTIFACT);
         state.setKey(gavtc);
-        populateFileState(state, artifactPath);
-        state.setDetails(gavtc);
+        FileSnapshot snapshot = fileSnapshotter.snapshotPath(artifactPath);
+        state.setPath(snapshot.getPath());
+        state.setExists(snapshot.isExists());
+        state.setLastModified(snapshot.getLastModified());
+        state.setCount(snapshot.getCount());
+        state.setTotalSize(snapshot.getTotalSize());
+        state.setDetails(gavtc + "|" + snapshot.describe());
         state.setUsesTimestamp(true);
         return state;
     }

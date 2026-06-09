@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,7 +56,44 @@ public class IncrementalAssembleCoreTest {
 
         assertThat(core.isUpToDate(previous, current)).isFalse();
         assertThat(core.describeDifference(previous, current))
-                .isEqualTo("input changed: FILE_TREE|project.output|target/classes previous=FILE_TREE|project.output|target/classes|true|10|1|100|before|true current=FILE_TREE|project.output|target/classes|true|11|1|100|after|true");
+                .isEqualTo("input changed: FILE_TREE|project.output|target/classes changed fields: lastModified 10 -> 11, details before -> after");
+    }
+
+    @Test
+    public void changedInputDifferenceShowsConcreteSourceFields() {
+        IncrementalState previous = state(
+                "stamp",
+                input("FILE_TREE", "project.output", Path.of("target/classes"), true, 10L, 1L, 100L, "payload.txt:100:10", true)
+        );
+        previous.setOutputs(List.of(output("zip", "teamcity-plugin", Path.of("plugin.zip"), 20L)));
+
+        IncrementalState current = state(
+                "stamp",
+                input("FILE_TREE", "project.output", Path.of("target/classes"), true, 20L, 2L, 150L, "payload.txt:100:10,added.txt:50:20", true)
+        );
+
+        assertThat(core.describeDifference(previous, current))
+                .isEqualTo("input changed: FILE_TREE|project.output|target/classes changed fields: lastModified 10 -> 20, count 1 -> 2, totalSize 100 -> 150, details payload.txt:100:10 -> payload.txt:100:10,added.txt:50:20");
+    }
+
+    @Test
+    public void changedOutputTimestampProducesExpectedDifferenceString() throws Exception {
+        Path output = Files.createTempFile("incremental-core-output", ".zip");
+        Files.setLastModifiedTime(output, FileTime.fromMillis(2000L));
+        IncrementalState previous = state(
+                "stamp",
+                input("FILE_TREE", "project.pom", Path.of("pom.xml"), true, 10L, 1L, 100L, "pom.xml|true|10|1|100", true)
+        );
+        previous.setOutputs(List.of(output("zip", "teamcity-plugin", output, 1000L)));
+
+        IncrementalState current = state(
+                "stamp",
+                input("FILE_TREE", "project.pom", Path.of("pom.xml"), true, 10L, 1L, 100L, "pom.xml|true|10|1|100", true)
+        );
+
+        assertThat(core.isUpToDate(previous, current)).isFalse();
+        assertThat(core.describeDifference(previous, current))
+                .isEqualTo("output changed: teamcity-plugin saved=1000 current=2000 path=" + output);
     }
 
     private static IncrementalState state(String configStamp, InputState... inputs) {

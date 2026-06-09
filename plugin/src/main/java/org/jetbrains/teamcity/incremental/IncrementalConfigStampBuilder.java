@@ -22,6 +22,7 @@ public class IncrementalConfigStampBuilder {
     private final String includes;
     private final String excludes;
     private final String ignoreExtraFilesIn;
+    private final String incrementalSnapshotExcludes;
 
     public IncrementalConfigStampBuilder(MavenProject project,
                                          Agent agent,
@@ -31,6 +32,18 @@ public class IncrementalConfigStampBuilder {
                                          String includes,
                                          String excludes,
                                          String ignoreExtraFilesIn) {
+        this(project, agent, server, execution, createIdeaArtifacts, includes, excludes, ignoreExtraFilesIn, null);
+    }
+
+    public IncrementalConfigStampBuilder(MavenProject project,
+                                         Agent agent,
+                                         Server server,
+                                         MojoExecution execution,
+                                         boolean createIdeaArtifacts,
+                                         String includes,
+                                         String excludes,
+                                         String ignoreExtraFilesIn,
+                                         String incrementalSnapshotExcludes) {
         this.project = project;
         this.agent = agent;
         this.server = server;
@@ -39,6 +52,7 @@ public class IncrementalConfigStampBuilder {
         this.includes = includes;
         this.excludes = excludes;
         this.ignoreExtraFilesIn = ignoreExtraFilesIn;
+        this.incrementalSnapshotExcludes = incrementalSnapshotExcludes;
     }
 
     public String build() {
@@ -51,6 +65,7 @@ public class IncrementalConfigStampBuilder {
         appendConfigValue(builder, "includes", includes);
         appendConfigValue(builder, "excludes", excludes);
         appendConfigValue(builder, "ignoreExtraFilesIn", ignoreExtraFilesIn);
+        appendConfigValue(builder, "incrementalSnapshotExcludes", incrementalSnapshotExcludes);
         appendAgentConfig(builder);
         appendServerConfig(builder);
         return builder.toString();

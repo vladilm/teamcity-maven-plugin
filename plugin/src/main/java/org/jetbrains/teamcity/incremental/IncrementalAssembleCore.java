@@ -25,18 +25,31 @@ public class IncrementalAssembleCore {
             return false;
         }
 
+        return describeOutputDifference(previous) == null;
+    }
+
+    public String describeOutputDifference(IncrementalState previous) {
+        if (previous == null) {
+            return "no previous state";
+        }
+        if (previous.getOutputs() == null || previous.getOutputs().isEmpty()) {
+            return "no previous outputs";
+        }
         int i;
         for (i = 0; i < previous.getOutputs().size(); i++) {
             OutputState output = previous.getOutputs().get(i);
             if (output.getPath() == null || !Files.exists(output.getPath())) {
-                return false;
+                return "missing output " + output.getPath();
             }
             long outputTs = getLastModified(output.getPath());
             if (outputTs != output.getLastModified()) {
-                return false;
+                return "output changed: " + output.getClassifier()
+                        + " saved=" + output.getLastModified()
+                        + " current=" + outputTs
+                        + " path=" + output.getPath();
             }
         }
-        return true;
+        return null;
     }
 
     public String describeDifference(IncrementalState previous, IncrementalState current) {
@@ -55,16 +68,9 @@ public class IncrementalAssembleCore {
         if (!sameInputs(previous.getInputs(), current.getInputs())) {
             return describeInputDifference(previous.getInputs(), current.getInputs());
         }
-        if (previous.getOutputs() == null || previous.getOutputs().isEmpty()) {
-            return "no previous outputs";
-        }
-
-        int i;
-        for (i = 0; i < previous.getOutputs().size(); i++) {
-            OutputState output = previous.getOutputs().get(i);
-            if (output.getPath() == null || !Files.exists(output.getPath())) {
-                return "missing output " + output.getPath();
-            }
+        String outputDifference = describeOutputDifference(previous);
+        if (outputDifference != null) {
+            return outputDifference;
         }
         return "savedOutputTs=" + collectOutputTimestamps(previous);
     }
@@ -130,9 +136,7 @@ public class IncrementalAssembleCore {
             InputState previous = safeFirst.get(i);
             InputState current = safeSecond.get(i);
             if (!previous.sameAs(current)) {
-                return "input changed: " + previous.identity()
-                        + " previous=" + previous.toFingerprint()
-                        + " current=" + current.toFingerprint();
+                return current.describeChangeFrom(previous);
             }
         }
         return "input fingerprint changed";

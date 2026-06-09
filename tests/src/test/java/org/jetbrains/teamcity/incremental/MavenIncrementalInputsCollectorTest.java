@@ -16,6 +16,42 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
     @Test
+    public void warPackagingDoesNotTrackCurrentProjectArtifact() throws Exception {
+        MavenSession session = initMavenSession("unit/module-war", "module-agent");
+        MavenProject project = session.getCurrentProject();
+        Path warArtifact = Paths.get(project.getBuild().getDirectory(), "module-war-1.1.war");
+        Files.createDirectories(warArtifact.getParent());
+        Files.writeString(warArtifact, "same-war-content");
+        project.getArtifact().setFile(warArtifact.toFile());
+
+        MojoExecution execution = rule.newMojoExecution("build");
+        AssemblePluginMojo mojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(session, execution);
+        MavenIncrementalInputsCollector collector = new MavenIncrementalInputsCollector(
+                project,
+                session,
+                Paths.get(project.getBuild().getDirectory(), "teamcity"),
+                Paths.get(project.getBuild().getOutputDirectory()).toFile(),
+                mojo.getAgent(),
+                mojo.getServer(),
+                execution,
+                false,
+                null,
+                null,
+                null,
+                new FileSnapshotter(),
+                new IncrementalStateStore()
+        );
+
+        IncrementalState state = collector.collectCurrentState();
+        InputState projectArtifact = findInput(state, "project.artifact");
+
+        assertThat(projectArtifact).isNotNull();
+        assertThat(projectArtifact.getKind()).isEqualTo("FILE_TREE");
+        assertThat(projectArtifact.getPath()).isNull();
+        assertThat(projectArtifact.isExists()).isFalse();
+    }
+
+    @Test
     public void prefersSavedReactorStateForReactorExtraInputs() throws Exception {
         MavenSession session = initMavenSession("unit/reactor-extra", "producer");
         MojoExecution execution = rule.newMojoExecution("build");

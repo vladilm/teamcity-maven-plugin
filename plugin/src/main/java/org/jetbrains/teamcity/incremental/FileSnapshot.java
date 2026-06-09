@@ -8,13 +8,18 @@ public class FileSnapshot {
     private long lastModified;
     private long count;
     private long totalSize;
+    private String details;
 
     public String describe() {
-        return (path == null ? "" : path.toString())
+        String summary = (path == null ? "" : path.toString())
                 + "|" + exists
                 + "|" + lastModified
                 + "|" + count
                 + "|" + totalSize;
+        if (details == null || details.isEmpty()) {
+            return summary;
+        }
+        return summary + "|" + details;
     }
 
     public Path getPath() {
@@ -55,5 +60,13 @@ public class FileSnapshot {
 
     public void setTotalSize(long totalSize) {
         this.totalSize = totalSize;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    public void setDetails(String details) {
+        this.details = details;
     }
 }
