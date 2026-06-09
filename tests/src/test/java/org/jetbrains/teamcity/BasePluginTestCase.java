@@ -26,6 +26,7 @@ import org.junit.Rule;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -66,6 +67,7 @@ public abstract class BasePluginTestCase {
             MavenSession session = rule.newMavenSession(project);
             session.setProjects(projects);
             File repoFile = new File(getTestDir(projectBase), "repo");
+            populateSharedTestRepo(repoFile.toPath());
             ArtifactRepository localRepo = createLocalArtifactRepository(repoFile);
             LocalRepository localRepository = createLocalRepository(repoFile);
             session.getRequest().setLocalRepository(localRepo);
@@ -143,6 +145,40 @@ public abstract class BasePluginTestCase {
                 new ArtifactRepositoryPolicy( true, ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS, ArtifactRepositoryPolicy.CHECKSUM_POLICY_IGNORE )
 
         );
+    }
+
+    private void populateSharedTestRepo(Path localRepo) throws IOException, URISyntaxException {
+        java.net.URL sharedRepoUrl = AssemblePluginMojo.class.getClassLoader().getResource("repo");
+        if (sharedRepoUrl == null) {
+            return;
+        }
+
+        Path sharedRepo = Path.of(sharedRepoUrl.toURI());
+        if (!Files.isDirectory(sharedRepo)) {
+            return;
+        }
+
+        Files.createDirectories(localRepo);
+        try (Stream<Path> stream = Files.walk(sharedRepo)) {
+            stream.forEach(source -> copySharedRepoEntry(sharedRepo, localRepo, source));
+        }
+    }
+
+    private void copySharedRepoEntry(Path sharedRepo, Path localRepo, Path source) {
+        try {
+            Path relative = sharedRepo.relativize(source);
+            Path destination = localRepo.resolve(relative.toString());
+            if (Files.isDirectory(source)) {
+                Files.createDirectories(destination);
+                return;
+            }
+            if (!Files.exists(destination)) {
+                Files.createDirectories(destination.getParent());
+                Files.copy(source, destination);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static <T> boolean eq(T s1, T s2) {

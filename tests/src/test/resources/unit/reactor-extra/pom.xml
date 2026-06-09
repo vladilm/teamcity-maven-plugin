@@ -1,0 +1,39 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>jb.int</groupId>
+    <artifactId>reactor-extra</artifactId>
+    <version>1.1-SNAPSHOT</version>
+    <name>reactor-extra</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils-core</artifactId>
+            <version>1.8.3</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jetbrains.teamcity</groupId>
+                <artifactId>teamcity-maven-plugin</artifactId>
+                <version>1.6.8-SNAPSHOT</version>
+                <configuration>
+                    <agent>
+                        <pluginName>reactor-extra</pluginName>
+                        <spec>commons-beanutils:commons-beanutils-core:*:*</spec>
+                        <extras>
+                            <extra>
+                                <source>producer/target/producer-1.1-SNAPSHOT-jar-with-dependencies.jar</source>
+                                <destDir>lib</destDir>
+                            </extra>
+                        </extras>
+                    </agent>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

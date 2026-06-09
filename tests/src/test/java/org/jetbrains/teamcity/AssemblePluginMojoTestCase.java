@@ -2,9 +2,18 @@ package org.jetbrains.teamcity;
 
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecution;
+import org.apache.maven.project.MavenProject;
+import org.jetbrains.teamcity.agent.ResultArtifact;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -94,8 +103,174 @@ public class AssemblePluginMojoTestCase extends BasePluginTestCase {
     }
 
     @Test
+    public void testIncrementalAssembleSkipsRepackingAndReattachesArtifacts() throws Exception {
+        MavenSession session = initMavenSession("unit/project-to-test");
+        deleteRecursively(Paths.get(session.getCurrentProject().getBuild().getDirectory(), "teamcity"));
+        MojoExecution execution = rule.newMojoExecution("build");
+        AssemblePluginMojo firstMojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(session, execution);
+        firstMojo.setFailOnMissingDependencies(false);
+        enableIncrementalIfSupported(firstMojo);
+        firstMojo.execute();
+
+        List<org.jetbrains.teamcity.agent.ResultArtifact> firstArtifacts = new ArrayList<>(firstMojo.getAgentPluginWorkflow().getAttachedArtifacts());
+        firstArtifacts.addAll(firstMojo.getServerPluginWorkflow().getAttachedArtifacts());
+        assertThat(firstArtifacts).isNotEmpty();
+
+        Map<String, Long> timestamps = new LinkedHashMap<>();
+        for (org.jetbrains.teamcity.agent.ResultArtifact artifact : firstArtifacts) {
+            timestamps.put(artifact.getClassifier(), Files.getLastModifiedTime(artifact.getFile()).toMillis());
+        }
+
+        Thread.sleep(1100L);
+
+        MavenSession secondSession = initMavenSession("unit/project-to-test");
+        MojoExecution secondExecution = rule.newMojoExecution("build");
+        AssemblePluginMojo secondMojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(secondSession, secondExecution);
+        secondMojo.setFailOnMissingDependencies(false);
+        enableIncrementalIfSupported(secondMojo);
+        secondMojo.execute();
+
+        assertThat(secondMojo.getAgentPluginWorkflow()).isNull();
+        assertThat(secondMojo.getServerPluginWorkflow()).isNull();
+        assertThat(secondMojo.getAttachedArtifact()).hasSize(firstArtifacts.size());
+
+        for (org.apache.maven.artifact.Artifact artifact : secondMojo.getAttachedArtifact()) {
+            Long previousTimestamp = timestamps.get(artifact.getClassifier());
+            assertThat(previousTimestamp).isNotNull();
+            assertThat(Files.getLastModifiedTime(artifact.getFile().toPath()).toMillis()).isEqualTo(previousTimestamp);
+        }
+    }
+
+    @Test
+    public void testIncrementalAssembleSkipsWhenExtraSourceBelongsToReactorProject() throws Exception {
+        MavenSession session = initMavenSession("unit/reactor-extra", "producer");
+        deleteRecursively(Paths.get(session.getCurrentProject().getBuild().getDirectory(), "teamcity"));
+
+        MavenProject producer = findProject(session, "producer");
+        Path extraArtifact = Paths.get(producer.getBuild().getDirectory(), "producer-1.1-SNAPSHOT-jar-with-dependencies.jar");
+        Files.createDirectories(extraArtifact.getParent());
+        Files.writeString(extraArtifact, "same-reactor-extra");
+
+        MojoExecution execution = rule.newMojoExecution("build");
+        AssemblePluginMojo firstMojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(session, execution);
+        firstMojo.setFailOnMissingDependencies(false);
+        enableIncrementalIfSupported(firstMojo);
+        firstMojo.execute();
+
+        List<org.jetbrains.teamcity.agent.ResultArtifact> firstArtifacts = new ArrayList<>(firstMojo.getAgentPluginWorkflow().getAttachedArtifacts());
+        assertThat(firstArtifacts).isNotEmpty();
+
+        Map<String, Long> timestamps = new LinkedHashMap<>();
+        for (org.jetbrains.teamcity.agent.ResultArtifact artifact : firstArtifacts) {
+            timestamps.put(artifact.getClassifier(), Files.getLastModifiedTime(artifact.getFile()).toMillis());
+        }
+
+        Thread.sleep(1100L);
+        Files.writeString(extraArtifact, "same-reactor-extra");
+
+        MavenSession secondSession = initMavenSession("unit/reactor-extra", "producer");
+        MojoExecution secondExecution = rule.newMojoExecution("build");
+        AssemblePluginMojo secondMojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(secondSession, secondExecution);
+        secondMojo.setFailOnMissingDependencies(false);
+        enableIncrementalIfSupported(secondMojo);
+        secondMojo.execute();
+
+        assertThat(secondMojo.getAgentPluginWorkflow()).isNull();
+        assertThat(secondMojo.getServerPluginWorkflow()).isNull();
+        assertThat(secondMojo.getAttachedArtifact()).hasSize(firstArtifacts.size());
+
+        for (org.apache.maven.artifact.Artifact artifact : secondMojo.getAttachedArtifact()) {
+            Long previousTimestamp = timestamps.get(artifact.getClassifier());
+            assertThat(previousTimestamp).isNotNull();
+            assertThat(Files.getLastModifiedTime(artifact.getFile().toPath()).toMillis()).isEqualTo(previousTimestamp);
+        }
+    }
+
+    @Test
+    public void testIncrementalAssembleSkipsWhenExtraSourceBelongsToCurrentProject() throws Exception {
+        MavenSession session = initMavenSession("unit/self-extra");
+        deleteRecursively(Paths.get(session.getCurrentProject().getBuild().getDirectory(), "teamcity"));
+
+        Path extraDir = Paths.get(session.getCurrentProject().getBuild().getDirectory(), "self-dist");
+        Files.createDirectories(extraDir);
+        Files.writeString(extraDir.resolve("payload.txt"), "same-self-extra");
+
+        MojoExecution execution = rule.newMojoExecution("build");
+        AssemblePluginMojo firstMojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(session, execution);
+        firstMojo.setFailOnMissingDependencies(false);
+        enableIncrementalIfSupported(firstMojo);
+        firstMojo.execute();
+
+        List<ResultArtifact> firstArtifacts = new ArrayList<ResultArtifact>(firstMojo.getAgentPluginWorkflow().getAttachedArtifacts());
+        assertThat(firstArtifacts).isNotEmpty();
+
+        Map<String, Long> timestamps = new LinkedHashMap<String, Long>();
+        for (ResultArtifact artifact : firstArtifacts) {
+            timestamps.put(artifact.getClassifier(), Files.getLastModifiedTime(artifact.getFile()).toMillis());
+        }
+
+        MavenSession secondSession = initMavenSession("unit/self-extra");
+        MojoExecution secondExecution = rule.newMojoExecution("build");
+        AssemblePluginMojo secondMojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(secondSession, secondExecution);
+        secondMojo.setFailOnMissingDependencies(false);
+        enableIncrementalIfSupported(secondMojo);
+        secondMojo.execute();
+
+        assertThat(secondMojo.getAgentPluginWorkflow()).isNull();
+        assertThat(secondMojo.getServerPluginWorkflow()).isNull();
+        assertThat(secondMojo.getAttachedArtifact()).hasSize(firstArtifacts.size());
+
+        for (org.apache.maven.artifact.Artifact artifact : secondMojo.getAttachedArtifact()) {
+            Long previousTimestamp = timestamps.get(artifact.getClassifier());
+            assertThat(previousTimestamp).isNotNull();
+            assertThat(Files.getLastModifiedTime(artifact.getFile().toPath()).toMillis()).isEqualTo(previousTimestamp);
+        }
+    }
+
+    private void enableIncrementalIfSupported(AssemblePluginMojo mojo) throws Exception {
+        try {
+            Field field = AssemblePluginMojo.class.getDeclaredField("incremental");
+            field.setAccessible(true);
+            field.setBoolean(mojo, true);
+        } catch (NoSuchFieldException ignored) {
+        }
+    }
+
+    private void deleteRecursively(Path path) throws Exception {
+        if (!Files.exists(path)) {
+            return;
+        }
+
+        Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws java.io.IOException {
+                Files.deleteIfExists(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, java.io.IOException exc) throws java.io.IOException {
+                Files.deleteIfExists(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+    }
+
+    private MavenProject findProject(MavenSession session, String artifactId) {
+        for (MavenProject project : session.getProjects()) {
+            if (project != null && artifactId.equals(project.getArtifactId())) {
+                return project;
+            }
+        }
+        throw new AssertionError("Project not found: " + artifactId);
+    }
+
+    @Test
     public void testMakeSimpleArtifact() throws Exception {
         MavenSession session = initMavenSession("unit/project-to-test");
+        Path ignoredBundle = Paths.get(session.getCurrentProject().getBuild().getDirectory(), "teamcity", "plugin", "project-to-test", "bundles", "1");
+        Files.createDirectories(ignoredBundle.getParent());
+        Files.writeString(ignoredBundle, "");
         MojoExecution execution = rule.newMojoExecution("build");
         AssemblePluginMojo mojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(session, execution);
         mojo.setFailOnMissingDependencies(false);
