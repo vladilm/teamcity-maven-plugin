@@ -4,6 +4,7 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.jetbrains.teamcity.Agent;
 import org.jetbrains.teamcity.Server;
 import org.jetbrains.teamcity.SourceDest;
@@ -31,6 +32,7 @@ public class MavenIncrementalInputsCollector {
     private final IncrementalAssembleCore core;
     private final ReactorInputStateResolver reactorStateResolver;
     private final IncrementalConfigStampBuilder configStampBuilder;
+    private final DependencyTreeInputBuilder dependencyTreeInputBuilder;
     private final Server server;
 
     public MavenIncrementalInputsCollector(MavenProject project,
@@ -86,6 +88,7 @@ public class MavenIncrementalInputsCollector {
         this.fileSnapshotter = fileSnapshotter;
         this.core = new IncrementalAssembleCore();
         this.reactorStateResolver = new ReactorInputStateResolver(project, session, fileSnapshotter, stateStore);
+        this.dependencyTreeInputBuilder = new DependencyTreeInputBuilder();
         this.configStampBuilder = new IncrementalConfigStampBuilder(
                 project,
                 agent,
@@ -100,12 +103,48 @@ public class MavenIncrementalInputsCollector {
     }
 
     public IncrementalState collectCurrentState() throws IOException {
+        return collectCurrentState(null);
+    }
+
+    public IncrementalState collectCurrentState(DependencyNode rootNode) throws IOException {
         ListInputSink sink = new ListInputSink();
-        collectInputs(sink);
+        collectDependencyInputs(sink, rootNode);
+        collectFileInputs(sink);
         return buildState(configStampBuilder.build(), sink.getInputs());
     }
 
     public IncrementalCheckResult checkCurrentState(IncrementalState previous) throws IOException {
+        return checkCurrentState(previous, null);
+    }
+
+    public IncrementalCheckResult checkCurrentState(IncrementalState previous, DependencyNode rootNode) throws IOException {
+        IncrementalCheckResult cheapResult = checkCheapState(previous);
+        if (cheapResult.isComplete()) {
+            return cheapResult;
+        }
+
+        CheckingInputSink sink = new CheckingInputSink(previous.getInputs());
+        String currentConfigStamp = configStampBuilder.build();
+        try {
+            collectDependencyInputs(sink, rootNode);
+            collectFileInputs(sink);
+        } catch (EarlyIncrementalMiss e) {
+            return IncrementalCheckResult.miss(e.getMessage());
+        }
+
+        String removedInput = sink.findRemovedInput();
+        if (removedInput != null) {
+            return IncrementalCheckResult.miss("input removed: " + removedInput);
+        }
+
+        IncrementalState current = buildState(currentConfigStamp, sink.getInputs());
+        if (core.isUpToDate(previous, current)) {
+            return IncrementalCheckResult.upToDate(current);
+        }
+        return IncrementalCheckResult.miss(core.describeDifference(previous, current));
+    }
+
+    public IncrementalCheckResult checkCheapState(IncrementalState previous) {
         if (previous == null) {
             return IncrementalCheckResult.miss("no previous state");
         }
@@ -123,26 +162,10 @@ public class MavenIncrementalInputsCollector {
             return IncrementalCheckResult.miss(outputDifference);
         }
 
-        CheckingInputSink sink = new CheckingInputSink(previous.getInputs());
-        try {
-            collectInputs(sink);
-        } catch (EarlyIncrementalMiss e) {
-            return IncrementalCheckResult.miss(e.getMessage());
-        }
-
-        String removedInput = sink.findRemovedInput();
-        if (removedInput != null) {
-            return IncrementalCheckResult.miss("input removed: " + removedInput);
-        }
-
-        IncrementalState current = buildState(currentConfigStamp, sink.getInputs());
-        if (core.isUpToDate(previous, current)) {
-            return IncrementalCheckResult.upToDate(current);
-        }
-        return IncrementalCheckResult.miss(core.describeDifference(previous, current));
+        return IncrementalCheckResult.continueCheck();
     }
 
-    private void collectInputs(InputSink sink) throws IOException {
+    private void collectFileInputs(InputSink sink) throws IOException {
         addFileTreeInput(sink, "project.pom", project.getFile() == null ? null : project.getFile().toPath());
         addFileTreeInput(sink, "project.output", projectBuildOutputDirectory == null ? null : projectBuildOutputDirectory.toPath());
         addFileTreeInput(sink, "project.artifact", getProjectArtifactPath());
@@ -163,7 +186,6 @@ public class MavenIncrementalInputsCollector {
             addExtrasInputs(sink, "server.extras", server.getExtras());
         }
 
-        addDependencyInputs(sink);
     }
 
     private IncrementalState buildState(String configStamp, List<InputState> inputs) {
@@ -177,13 +199,26 @@ public class MavenIncrementalInputsCollector {
         return state;
     }
 
+    private void collectDependencyInputs(InputSink sink, DependencyNode rootNode) throws IOException {
+        if (rootNode != null) {
+            sink.add(dependencyTreeInputBuilder.buildTreeInput(rootNode));
+            addDependencyInputs(sink, dependencyTreeInputBuilder.collectDependencyArtifacts(rootNode));
+            return;
+        }
+        addDependencyInputs(sink);
+    }
+
     private void addDependencyInputs(InputSink sink) throws IOException {
         if (project.getArtifacts() == null) {
             return;
         }
 
+        addDependencyInputs(sink, new ArrayList<Artifact>(project.getArtifacts()));
+    }
+
+    private void addDependencyInputs(InputSink sink, List<Artifact> artifacts) throws IOException {
         Map<String, InputState> uniqueInputs = new LinkedHashMap<String, InputState>();
-        for (Artifact artifact : project.getArtifacts()) {
+        for (Artifact artifact : artifacts) {
             if (artifact == null) {
                 continue;
             }

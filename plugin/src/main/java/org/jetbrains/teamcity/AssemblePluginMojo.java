@@ -126,9 +126,16 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                     ignoreExtraFilesIn,
                     incrementalSnapshotExcludes
             );
+            WorkflowUtil util = null;
+            DependencyNode rootNode = null;
             if (incremental) {
                 IncrementalState previousState = incrementalSupport.loadState();
-                IncrementalCheckResult checkResult = incrementalSupport.checkCurrentState(previousState);
+                IncrementalCheckResult checkResult = incrementalSupport.checkCheapState(previousState);
+                if (!checkResult.isComplete()) {
+                    util = getWorkflowUtil();
+                    rootNode = findRootNode(util);
+                    checkResult = incrementalSupport.checkCurrentState(previousState, rootNode);
+                }
                 if (checkResult.isUpToDate()) {
                     getLog().info("TeamCity Assemble is up-to-date, skipping");
                     attachArtifacts(incrementalSupport.restoreAttachedArtifacts(previousState));
@@ -137,8 +144,12 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                 getLog().info("TeamCity Assemble incremental miss: " + checkResult.getReason());
             }
 
-            WorkflowUtil util = getWorkflowUtil();
-            DependencyNode rootNode = findRootNode(util);
+            if (util == null) {
+                util = getWorkflowUtil();
+            }
+            if (rootNode == null) {
+                rootNode = findRootNode(util);
+            }
 
             agentPluginWorkflow = new AgentPluginWorkflow(rootNode, agent, util, getWorkDirectory().toPath(), createIdeaArtifacts);
             agentPluginWorkflow.execute();
@@ -154,7 +165,7 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
             List<ResultArtifact> attachedArtifacts = new ArrayList<ResultArtifact>();
             attachedArtifacts.addAll(agentPluginWorkflow.getAttachedArtifacts());
             attachedArtifacts.addAll(serverPluginWorkflow.getAttachedArtifacts());
-            IncrementalState currentState = incrementalSupport.collectCurrentState();
+            IncrementalState currentState = incrementalSupport.collectCurrentState(rootNode);
             incrementalSupport.saveState(currentState.withOutputs(attachedArtifacts));
 
         } catch (IOException e) {

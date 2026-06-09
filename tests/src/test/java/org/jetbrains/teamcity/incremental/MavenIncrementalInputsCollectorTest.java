@@ -1,20 +1,73 @@
 package org.jetbrains.teamcity.incremental;
 
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.artifact.handler.DefaultArtifactHandler;
+import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Exclusion;
+import org.apache.maven.model.Model;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.dependency.graph.DependencyNode;
+import org.apache.maven.shared.dependency.graph.traversal.DependencyNodeVisitor;
 import org.jetbrains.teamcity.AssemblePluginMojo;
 import org.jetbrains.teamcity.BasePluginTestCase;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
+    private final IncrementalAssembleCore core = new IncrementalAssembleCore();
+
+    @Test
+    public void outputMissStopsBeforeFileSnapshots() throws Exception {
+        MavenProject project = simpleProject();
+        FailingFileSnapshotter snapshotter = new FailingFileSnapshotter();
+        MavenIncrementalInputsCollector collector = simpleCollector(project, snapshotter);
+        IncrementalState previous = previousState(project, Collections.<InputState>emptyList(), Collections.<OutputState>emptyList());
+
+        IncrementalCheckResult result = collector.checkCheapState(previous);
+
+        assertThat(result.isComplete()).isTrue();
+        assertThat(result.isUpToDate()).isFalse();
+        assertThat(result.getReason()).isEqualTo("no previous outputs");
+        assertThat(snapshotter.getCalls()).isEqualTo(0);
+    }
+
+    @Test
+    public void dependencyTreeMissStopsBeforeFileSnapshots() throws Exception {
+        MavenProject project = simpleProject();
+        FailingFileSnapshotter snapshotter = new FailingFileSnapshotter();
+        MavenIncrementalInputsCollector collector = simpleCollector(project, snapshotter);
+        DependencyTreeInputBuilder treeInputBuilder = new DependencyTreeInputBuilder();
+        InputState previousTree = treeInputBuilder.buildTreeInput(node("root", "1.0-SNAPSHOT", node("direct", "1.0")));
+        Path output = Files.createTempFile("incremental-tree-output", ".zip");
+        IncrementalState previous = previousState(
+                project,
+                Collections.singletonList(previousTree),
+                Collections.singletonList(outputState(output))
+        );
+
+        IncrementalCheckResult result = collector.checkCurrentState(
+                previous,
+                node("root", "1.0-SNAPSHOT", node("direct", "1.1"))
+        );
+
+        assertThat(result.isComplete()).isTrue();
+        assertThat(result.isUpToDate()).isFalse();
+        assertThat(result.getReason()).contains("DEPENDENCY_TREE|runtime").contains("direct").contains("1.0").contains("1.1");
+        assertThat(snapshotter.getCalls()).isEqualTo(0);
+    }
+
     @Test
     public void warPackagingDoesNotTrackCurrentProjectArtifact() throws Exception {
         MavenSession session = initMavenSession("unit/module-war", "module-agent");
@@ -119,5 +172,169 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
             }
         }
         return null;
+    }
+
+    private MavenIncrementalInputsCollector simpleCollector(MavenProject project, FileSnapshotter snapshotter) throws Exception {
+        Path workDirectory = Files.createTempDirectory("incremental-collector");
+        return new MavenIncrementalInputsCollector(
+                project,
+                null,
+                workDirectory,
+                workDirectory.resolve("classes").toFile(),
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null,
+                snapshotter,
+                new IncrementalStateStore()
+        );
+    }
+
+    private IncrementalState previousState(MavenProject project, List<InputState> inputs, List<OutputState> outputs) {
+        IncrementalState state = new IncrementalState();
+        state.setConfigStamp(new IncrementalConfigStampBuilder(
+                project,
+                null,
+                null,
+                null,
+                false,
+                null,
+                null,
+                null,
+                null
+        ).build());
+        state.setInputs(inputs);
+        state.setLatestInputTs(core.calculateLatestInputTs(inputs));
+        state.setInputFingerprint(core.buildInputFingerprint(inputs));
+        state.setOutputs(outputs);
+        return state;
+    }
+
+    private OutputState outputState(Path path) throws Exception {
+        OutputState state = new OutputState();
+        state.setType("zip");
+        state.setClassifier("teamcity-plugin");
+        state.setPath(path);
+        state.setLastModified(Files.getLastModifiedTime(path).toMillis());
+        return state;
+    }
+
+    private MavenProject simpleProject() {
+        Model model = new Model();
+        model.setGroupId("org.example");
+        model.setArtifactId("app");
+        model.setVersion("1.0-SNAPSHOT");
+        return new MavenProject(model);
+    }
+
+    private static TestNode node(String artifactId, String version, TestNode... children) {
+        return new TestNode(artifact(artifactId, version), children);
+    }
+
+    private static Artifact artifact(String artifactId, String version) {
+        return new DefaultArtifact(
+                "org.example",
+                artifactId,
+                VersionRange.createFromVersion(version),
+                "runtime",
+                "jar",
+                null,
+                new DefaultArtifactHandler("jar")
+        );
+    }
+
+    private static class FailingFileSnapshotter extends FileSnapshotter {
+        private int calls;
+
+        @Override
+        public FileSnapshot snapshotPath(Path path) throws IOException {
+            calls++;
+            throw new AssertionError("File snapshot should not be calculated before the first incremental miss");
+        }
+
+        @Override
+        public FileSnapshot snapshotToolInput(Path path, String projectArtifactFileName) throws IOException {
+            calls++;
+            throw new AssertionError("Tool snapshot should not be calculated before the first incremental miss");
+        }
+
+        private int getCalls() {
+            return calls;
+        }
+    }
+
+    private static class TestNode implements DependencyNode {
+        private final Artifact artifact;
+        private final List<DependencyNode> children;
+        private DependencyNode parent;
+
+        private TestNode(Artifact artifact, TestNode... children) {
+            this.artifact = artifact;
+            this.children = Collections.unmodifiableList(Arrays.<DependencyNode>asList(children));
+            int i;
+            for (i = 0; i < children.length; i++) {
+                children[i].parent = this;
+            }
+        }
+
+        @Override
+        public Artifact getArtifact() {
+            return artifact;
+        }
+
+        @Override
+        public List<DependencyNode> getChildren() {
+            return children;
+        }
+
+        @Override
+        public boolean accept(DependencyNodeVisitor visitor) {
+            if (!visitor.visit(this)) {
+                return false;
+            }
+            int i;
+            for (i = 0; i < children.size(); i++) {
+                children.get(i).accept(visitor);
+            }
+            return visitor.endVisit(this);
+        }
+
+        @Override
+        public DependencyNode getParent() {
+            return parent;
+        }
+
+        @Override
+        public String getPremanagedVersion() {
+            return null;
+        }
+
+        @Override
+        public String getPremanagedScope() {
+            return null;
+        }
+
+        @Override
+        public String getVersionConstraint() {
+            return null;
+        }
+
+        @Override
+        public String toNodeString() {
+            return artifact.toString();
+        }
+
+        @Override
+        public Boolean getOptional() {
+            return Boolean.FALSE;
+        }
+
+        @Override
+        public List<Exclusion> getExclusions() {
+            return Collections.emptyList();
+        }
     }
 }

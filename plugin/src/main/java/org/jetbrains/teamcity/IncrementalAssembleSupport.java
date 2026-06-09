@@ -3,6 +3,7 @@ package org.jetbrains.teamcity;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.jetbrains.teamcity.agent.ResultArtifact;
 import org.jetbrains.teamcity.incremental.FileSnapshotter;
 import org.jetbrains.teamcity.incremental.IncrementalAssembleCore;
@@ -58,8 +59,20 @@ public class IncrementalAssembleSupport {
         return inputsCollector.collectCurrentState();
     }
 
+    public IncrementalState collectCurrentState(DependencyNode rootNode) throws IOException {
+        return inputsCollector.collectCurrentState(rootNode);
+    }
+
     public IncrementalCheckResult checkCurrentState(IncrementalState previous) throws IOException {
         return inputsCollector.checkCurrentState(previous);
+    }
+
+    public IncrementalCheckResult checkCurrentState(IncrementalState previous, DependencyNode rootNode) throws IOException {
+        return inputsCollector.checkCurrentState(previous, rootNode);
+    }
+
+    public IncrementalCheckResult checkCheapState(IncrementalState previous) {
+        return inputsCollector.checkCheapState(previous);
     }
 
     public IncrementalState loadState() throws IOException {

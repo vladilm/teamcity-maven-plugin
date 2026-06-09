@@ -60,6 +60,10 @@
   - compare full dependency graph identity before file-tree snapshots;
   - log the first mismatch and skip later verification stages;
   - if verification misses, run the build normally and collect a full state afterward for the next run.
+- Dependency tree traversal should treat matching RELEASE nodes as immutable boundaries:
+  - include the release node identity;
+  - do not traverse its transitive children when the release coordinate is unchanged;
+  - keep traversing SNAPSHOT nodes and the current project root.
 - Incremental miss diagnostics should include the input identity and changed metadata fields:
   - path/existence;
   - last modified timestamp;
@@ -71,15 +75,15 @@
 
 | Area | Positive Case | Negative Case | Status |
 | --- | --- | --- | --- |
-| SNAPSHOT dependency | Same coordinate, artifact size/mtime changes -> miss | Same coordinate, same artifact size/mtime -> up-to-date | In progress |
-| RELEASE dependency | Release version changes, for example `1.0` -> `1.1` -> miss | Same release coordinate, local file changes -> up-to-date | In progress |
-| Transitive dependency | Add a new transitive dependency input -> miss | Same dependency graph -> up-to-date | In progress |
-| Module target content | `target/classes` file size/mtime/path changes -> miss | No target content size/mtime/path change -> up-to-date | In progress |
-| Filesystem input | Tracked filesystem size/mtime/path changes -> miss | Excluded filesystem path changes -> up-to-date | In progress |
+| SNAPSHOT dependency | Same coordinate, artifact size/mtime changes -> miss | Same coordinate, same artifact size/mtime -> up-to-date | Implemented |
+| RELEASE dependency | Release version changes, for example `1.0` -> `1.1` -> miss | Same release coordinate, local file changes -> up-to-date | Implemented |
+| Transitive dependency | Add a new transitive dependency input -> miss | Same dependency graph -> up-to-date | Implemented |
+| Module target content | `target/classes` file size/mtime/path changes -> miss | No target content size/mtime/path change -> up-to-date | Implemented |
+| Filesystem input | Tracked filesystem size/mtime/path changes -> miss | Excluded filesystem path changes -> up-to-date | Implemented |
 | Output state | Output timestamp changes -> miss with useful diagnostics | Output exists and timestamp matches -> up-to-date | Implemented |
 | Snapshot details | Rename same-size/same-mtime file -> miss | Ignored/generated files change -> up-to-date | Implemented |
-| Early stop | First cheap mismatch stops later snapshot checks and logs reason | Matching cheap checks continue into later stages | Planned |
-| Dependency tree | Added/removed/changed direct or transitive node -> miss | Same tree identity -> continue/up-to-date | Planned |
+| Early stop | First cheap/dependency-tree mismatch stops later snapshot checks and logs reason | Matching cheap checks continue into later stages | Implemented |
+| Dependency tree | Added/removed/changed direct or transitive SNAPSHOT-side node -> miss | Same release node does not traverse transitive children | Implemented |
 
 ## Implementation Notes
 
@@ -95,11 +99,14 @@
 - The production check should not use the old all-inputs-at-once flow for incremental decisions.
 - The production check should expose stages explicitly enough to test that later expensive stages are not touched after an earlier mismatch.
 - The production log should use the same early-check miss reason that unit tests assert.
+- Production should pass the resolved `DependencyNode` into incremental state collection and checking.
+- Unit tests should verify that dependency-tree mismatch stops before filesystem snapshotting.
 
 ## Verification Commands
 
 ```bash
 make test MODULE=tests TEST=IncrementalAssemblySourcesFixtureTest
+make test MODULE=tests TEST=DependencyTreeInputBuilderTest,MavenIncrementalInputsCollectorTest
 make test MODULE=tests TEST=FileSnapshotterTest,IncrementalAssembleCoreTest
 make test MODULE=tests TEST=TeamCityMojoScenarioConceptTest,IncrementalAssembleCoreTest,IncrementalStateStoreTest,FileSnapshotterTest,IncrementalConfigStampBuilderTest,ReactorInputStateResolverTest,MavenIncrementalInputsCollectorTest
 make test MODULE=tests
