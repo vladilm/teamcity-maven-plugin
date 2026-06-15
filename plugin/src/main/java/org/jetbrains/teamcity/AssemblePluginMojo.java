@@ -109,7 +109,6 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().info("TeamCity Assemble start");
         if (!agent.isNeedToBuild() && !server.isNeedToBuild())
             return;
         setDefaultconfigurationValues(pluginVersion);
@@ -144,6 +143,8 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                     return;
                 }
                 getLog().info("TeamCity Assemble incremental miss: " + checkResult.getReason());
+            } else {
+                getLog().info("TeamCity Assemble start");
             }
 
             if (util == null) {

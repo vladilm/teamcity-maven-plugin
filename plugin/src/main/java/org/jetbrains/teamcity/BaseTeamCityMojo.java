@@ -99,7 +99,7 @@ public abstract class BaseTeamCityMojo extends AbstractMojo {
 
             rootNode = dependencyCollectorBuilder.collectDependencyGraph(buildingRequest, artifactFilter);
             String dependencyTreeString = serializeDependencyTree(rootNode, util);
-            getLog().warn("Dependency Tree:\n" + dependencyTreeString);
+            getLog().debug("Dependency Tree:\n" + dependencyTreeString);
         } catch (DependencyCollectorBuilderException exception) {
             throw new MojoExecutionException("Cannot build project dependency graph", exception);
         }
