@@ -89,17 +89,14 @@ public abstract class BaseTeamCityMojo extends AbstractMojo {
         artifacts.forEach(it -> mavenProjectHelper.attachArtifact(getProject(), it.getType(), it.getClassifier(), it.getFile().toFile()));
     }
 
-    protected DependencyNode findRootNode(WorkflowUtil util) throws MojoExecutionException {
+    protected DependencyNode findRootNode() throws MojoExecutionException {
         DependencyNode rootNode;
         try {
             ArtifactFilter artifactFilter = createResolvingArtifactFilter(SCOPE_RUNTIME);
-            ProjectBuildingRequest buildingRequest =
-                    new DefaultProjectBuildingRequest(session.getProjectBuildingRequest());
+            ProjectBuildingRequest buildingRequest = new DefaultProjectBuildingRequest(session.getProjectBuildingRequest());
             buildingRequest.setProject(getProject());
 
             rootNode = dependencyCollectorBuilder.collectDependencyGraph(buildingRequest, artifactFilter);
-            String dependencyTreeString = serializeDependencyTree(rootNode, util);
-            getLog().debug("Dependency Tree:\n" + dependencyTreeString);
         } catch (DependencyCollectorBuilderException exception) {
             throw new MojoExecutionException("Cannot build project dependency graph", exception);
         }
@@ -120,18 +117,5 @@ public abstract class BaseTeamCityMojo extends AbstractMojo {
         }
 
         return filter;
-    }
-
-    private String serializeDependencyTree(DependencyNode theRootNode, WorkflowUtil util) {
-        StringWriter writer = new StringWriter();
-
-        DependencyNodeVisitor visitor = util.getSerializingDependencyNodeVisitor(writer);
-
-        // TODO: remove the need for this when the serializer can calculate last nodes from visitor calls only
-        visitor = new BuildingDependencyNodeVisitor(visitor);
-
-        theRootNode.accept(visitor);
-
-        return writer.toString();
     }
 }

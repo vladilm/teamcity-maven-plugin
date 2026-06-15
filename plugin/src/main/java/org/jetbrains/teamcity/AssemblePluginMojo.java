@@ -128,7 +128,9 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                     incrementalSnapshotExcludes
             );
             final WorkflowUtil util = getWorkflowUtil();
-            final DependencyNode rootNode = findRootNode(util);
+            final DependencyNode rootNode = findRootNode();
+            getLog().debug("Dependency Tree: " + util.serializeDependencyTree(rootNode));
+
             if (incremental) {
                 IncrementalState previousState = incrementalSupport.loadState();
                 IncrementalCheckResult checkResult = incrementalSupport.checkCheapState(previousState);

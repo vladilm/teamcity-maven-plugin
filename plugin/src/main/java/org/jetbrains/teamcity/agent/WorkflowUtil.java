@@ -22,10 +22,7 @@ import org.apache.maven.shared.dependency.graph.filter.AndDependencyNodeFilter;
 import org.apache.maven.shared.dependency.graph.filter.ArtifactDependencyNodeFilter;
 import org.apache.maven.shared.dependency.graph.filter.DependencyNodeFilter;
 import org.apache.maven.shared.dependency.graph.internal.ConflictData;
-import org.apache.maven.shared.dependency.graph.traversal.CollectingDependencyNodeVisitor;
-import org.apache.maven.shared.dependency.graph.traversal.DependencyNodeVisitor;
-import org.apache.maven.shared.dependency.graph.traversal.FilteringDependencyNodeVisitor;
-import org.apache.maven.shared.dependency.graph.traversal.SerializingDependencyNodeVisitor;
+import org.apache.maven.shared.dependency.graph.traversal.*;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -580,5 +577,18 @@ public class WorkflowUtil {
             return p;
         }
         return Jdk8Compat.ofPath(project.getBasedir().getPath()).resolve(p).toAbsolutePath();
+    }
+
+    public String serializeDependencyTree(DependencyNode theRootNode) {
+        StringWriter writer = new StringWriter();
+
+        DependencyNodeVisitor visitor = getSerializingDependencyNodeVisitor(writer);
+
+        // TODO: remove the need for this when the serializer can calculate last nodes from visitor calls only
+        visitor = new BuildingDependencyNodeVisitor(visitor);
+
+        theRootNode.accept(visitor);
+
+        return writer.toString();
     }
 }
