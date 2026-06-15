@@ -127,14 +127,12 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                     ignoreExtraFilesIn,
                     incrementalSnapshotExcludes
             );
-            WorkflowUtil util = null;
-            DependencyNode rootNode = null;
+            final WorkflowUtil util = getWorkflowUtil();
+            final DependencyNode rootNode = findRootNode(util);
             if (incremental) {
                 IncrementalState previousState = incrementalSupport.loadState();
                 IncrementalCheckResult checkResult = incrementalSupport.checkCheapState(previousState);
                 if (!checkResult.isComplete()) {
-                    util = getWorkflowUtil();
-                    rootNode = findRootNode(util);
                     checkResult = incrementalSupport.checkCurrentState(previousState, rootNode);
                 }
                 if (checkResult.isUpToDate()) {
@@ -145,13 +143,6 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                 getLog().info("TeamCity Assemble incremental miss: " + checkResult.getReason());
             } else {
                 getLog().info("TeamCity Assemble start");
-            }
-
-            if (util == null) {
-                util = getWorkflowUtil();
-            }
-            if (rootNode == null) {
-                rootNode = findRootNode(util);
             }
 
             agentPluginWorkflow = new AgentPluginWorkflow(rootNode, agent, util, getWorkDirectory().toPath(), createIdeaArtifacts);
