@@ -23,8 +23,8 @@ public class AssemblePluginMojoTestCase extends BasePluginTestCase {
     @Test
     public void testMakeAgentArtifact() throws Exception {
         MavenSession session = initMavenSession("agent/simple");
-        MojoExecution execution = rule.newMojoExecution("build-agent");
-        AgentPluginMojo mojo = (AgentPluginMojo) rule.lookupConfiguredMojo(session, execution);
+        MojoExecution execution = rule.newMojoExecution("build");
+        AssemblePluginMojo mojo = (AssemblePluginMojo) rule.lookupConfiguredMojo(session, execution);
         mojo.execute();
         StringJoiner sb = new StringJoiner("\n");
         appendTestResult(sb, mojo.getAgentPluginWorkflow());

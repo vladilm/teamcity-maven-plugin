@@ -33,26 +33,20 @@
                 <artifactId>teamcity-maven-plugin</artifactId>
                 <version>1.6.8-SNAPSHOT</version>
                 <configuration>
-                    <spec>commons-beanutils:commons-beanutils-core:*:*</spec>
-                    <exclusions>commons-codec</exclusions>
-                    <pluginName>simple2</pluginName>
-                    <descriptor>
-                        <pluginDependencies>
-                            <pluginDependency>java-dowser</pluginDependency>
-                        </pluginDependencies>
-                        <toolDependencies>
-                            <toolDependency>ant</toolDependency>
-                        </toolDependencies>
-                    </descriptor>
+                    <agent>
+                        <spec>commons-beanutils:commons-beanutils-core:*:*</spec>
+                        <exclusions>commons-codec</exclusions>
+                        <pluginName>simple2</pluginName>
+                        <descriptor>
+                            <pluginDependencies>
+                                <pluginDependency>java-dowser</pluginDependency>
+                            </pluginDependencies>
+                            <toolDependencies>
+                                <toolDependency>ant</toolDependency>
+                            </toolDependencies>
+                        </descriptor>
+                    </agent>
                 </configuration>
-                <executions>
-                    <execution>
-                        <id>build-agent-teamcity-plugin</id>
-                        <goals>
-                            <goal>build-agent</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
