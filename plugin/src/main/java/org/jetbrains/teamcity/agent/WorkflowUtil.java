@@ -228,7 +228,7 @@ public class WorkflowUtil {
         AndDependencyNodeFilter andDependencyNodeFilter = new AndDependencyNodeFilter(exclusionFilter, it -> isParentClassifierIn(it, TEAMCITY_PLUGIN_CLASSIFIER, TEAMCITY_AGENT_PLUGIN_CLASSIFIER));
         SkipFilteringDependencyNodeVisitor visitor = new SkipFilteringDependencyNodeVisitor(mdnv, andDependencyNodeFilter);
         nodes.forEach(it -> it.accept(visitor));
-        getLog().info("Dependencies according to spec " + spec + ":\n" + writer);
+        getLog().info("Dependencies according to spec " + spec + " -> " + writer.toString().replaceFirst("\\R+$", ""));
         List<DependencyNode> nodes1 = transitiveCollectingVisitor.getNodes();
         // now conflicted dependencies might be in list, need to find them and resolve to the right version
         List<DependencyNode> result = new ArrayList<>();
