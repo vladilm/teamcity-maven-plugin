@@ -58,7 +58,7 @@ public class FileSnapshotterTest {
     }
 
     @Test
-    public void directorySnapshotIncludesRelativeFileNames() throws Exception {
+    public void directorySnapshotUsesDigestInsteadOfRelativeFileNames() throws Exception {
         Path dir = Files.createTempDirectory("snapshotter-rename");
         Path first = dir.resolve("a.txt");
         Files.writeString(first, "same");
@@ -77,8 +77,10 @@ public class FileSnapshotterTest {
         assertThat(after.getTotalSize()).isEqualTo(before.getTotalSize());
         assertThat(after.getLastModified()).isEqualTo(before.getLastModified());
         assertThat(after.describe()).isNotEqualTo(before.describe());
-        assertThat(before.describe()).contains("a.txt");
-        assertThat(after.describe()).contains("b.txt");
+        assertThat(before.getDetails()).matches("sha256=[0-9a-f]{64}");
+        assertThat(after.getDetails()).matches("sha256=[0-9a-f]{64}");
+        assertThat(before.describe()).doesNotContain("a.txt");
+        assertThat(after.describe()).doesNotContain("b.txt");
     }
 
     @Test

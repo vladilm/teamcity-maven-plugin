@@ -21,7 +21,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -148,6 +150,27 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
         assertThat(reactorInput.getLastModified()).isEqualTo(456L);
     }
 
+    @Test
+    public void dependencyInputsComeOnlyFromSuppliedRootNode() throws Exception {
+        MavenProject project = simpleProject();
+        Set<Artifact> artifacts = new LinkedHashSet<Artifact>();
+        artifacts.add(artifact("compile-lib", "1.0", "compile"));
+        artifacts.add(artifact("provided-lib", "1.0", "provided"));
+        project.setArtifacts(artifacts);
+
+        MavenIncrementalInputsCollector collector = simpleCollector(project, new FileSnapshotter());
+
+        IncrementalState state = collector.collectCurrentState();
+
+        assertThat(state.getInputFingerprint()).doesNotContain("compile-lib");
+        assertThat(state.getInputFingerprint()).doesNotContain("provided-lib");
+
+        IncrementalState stateWithRootNode = collector.collectCurrentState(node("root", "1.0-SNAPSHOT", node("compile-lib", "1.0")));
+
+        assertThat(stateWithRootNode.getInputFingerprint()).contains("compile-lib");
+        assertThat(stateWithRootNode.getInputFingerprint()).doesNotContain("provided-lib");
+    }
+
     private InputState findInput(IncrementalState state, String keyPrefix) {
         if (state == null || state.getInputs() == null) {
             return null;
@@ -235,11 +258,15 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
     }
 
     private static Artifact artifact(String artifactId, String version) {
+        return artifact(artifactId, version, "runtime");
+    }
+
+    private static Artifact artifact(String artifactId, String version, String scope) {
         return new DefaultArtifact(
                 "org.example",
                 artifactId,
                 VersionRange.createFromVersion(version),
-                "runtime",
+                scope,
                 "jar",
                 null,
                 new DefaultArtifactHandler("jar")

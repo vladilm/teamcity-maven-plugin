@@ -84,7 +84,7 @@ public class FileSnapshotter {
             }
         });
         Collections.sort(details);
-        snapshot.setDetails(join(details));
+        snapshot.setDetails("sha256=" + DigestUtil.sha256(details));
         if (result.getCount() == 0L) {
             result.setLastModified(getLastModified(path));
         }
@@ -107,18 +107,6 @@ public class FileSnapshotter {
 
     private String normalize(Path path) {
         return path.toString().replace('\\', '/');
-    }
-
-    private String join(List<String> values) {
-        StringBuilder builder = new StringBuilder();
-        int i;
-        for (i = 0; i < values.size(); i++) {
-            if (builder.length() > 0) {
-                builder.append(',');
-            }
-            builder.append(values.get(i));
-        }
-        return builder.toString();
     }
 
     private boolean shouldIgnore(Path root, Path file, List<String> ignoredFileNames) {

@@ -203,17 +203,7 @@ public class MavenIncrementalInputsCollector {
         if (rootNode != null) {
             sink.add(dependencyTreeInputBuilder.buildTreeInput(rootNode));
             addDependencyInputs(sink, dependencyTreeInputBuilder.collectDependencyArtifacts(rootNode));
-            return;
         }
-        addDependencyInputs(sink);
-    }
-
-    private void addDependencyInputs(InputSink sink) throws IOException {
-        if (project.getArtifacts() == null) {
-            return;
-        }
-
-        addDependencyInputs(sink, new ArrayList<Artifact>(project.getArtifacts()));
     }
 
     private void addDependencyInputs(InputSink sink, List<Artifact> artifacts) throws IOException {
