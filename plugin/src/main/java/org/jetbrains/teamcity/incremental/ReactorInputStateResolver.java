@@ -7,6 +7,9 @@ import org.apache.maven.project.MavenProject;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -87,7 +90,7 @@ public class ReactorInputStateResolver {
             state.setKey(gavtc);
             state.setPath(externalStateFile);
             state.setExists(true);
-            state.setDetails(emptyIfNull(externalState.getConfigStamp()) + "|" + emptyIfNull(externalState.getInputFingerprint()));
+            state.setDetails(emptyIfNull(externalState.getConfigStamp()) + "|" + sha256(emptyIfNull(externalState.getInputFingerprint())));
             state.setLastModified(externalState.getLatestInputTs());
             state.setUsesTimestamp(true);
             return state;
@@ -234,5 +237,23 @@ public class ReactorInputStateResolver {
 
     private static String emptyIfNull(String value) {
         return value == null ? "" : value;
+    }
+
+    private static String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            char[] hex = new char[bytes.length * 2];
+            char[] alphabet = "0123456789abcdef".toCharArray();
+            int i;
+            for (i = 0; i < bytes.length; i++) {
+                int unsignedByte = bytes[i] & 0xff;
+                hex[i * 2] = alphabet[unsignedByte >>> 4];
+                hex[i * 2 + 1] = alphabet[unsignedByte & 0x0f];
+            }
+            return new String(hex);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
 }

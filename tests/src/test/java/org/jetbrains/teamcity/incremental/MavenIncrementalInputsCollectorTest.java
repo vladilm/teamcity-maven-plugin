@@ -144,7 +144,7 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
         assertThat(reactorInput).isNotNull();
         assertThat(reactorInput.getKind()).isEqualTo("REACTOR_ARTIFACT_STATE");
         assertThat(reactorInput.getPath()).isEqualTo(reactorStateFile);
-        assertThat(reactorInput.getDetails()).isEqualTo("reactor-config|reactor-inputs");
+        assertThat(reactorInput.getDetails()).isEqualTo("reactor-config|51dd99f9fcf8fb79df2854621c8e1599417756bb5c062d76419a387c2221fe79");
         assertThat(reactorInput.getLastModified()).isEqualTo(456L);
     }
 
