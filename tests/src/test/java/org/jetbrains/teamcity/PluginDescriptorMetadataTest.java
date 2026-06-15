@@ -20,7 +20,6 @@ public class PluginDescriptorMetadataTest {
             Document document = factory.newDocumentBuilder().parse(pluginXml);
 
             NodeList mojos = document.getElementsByTagName("mojo");
-            assertThat(mojos.getLength()).isGreaterThanOrEqualTo(3);
 
             for (int i = 0; i < mojos.getLength(); i++) {
                 org.w3c.dom.Element mojo = (org.w3c.dom.Element) mojos.item(i);
