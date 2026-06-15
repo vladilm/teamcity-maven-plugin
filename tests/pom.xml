@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jetbrains.teamcity</groupId>
         <artifactId>teamcity-maven-plugin-parent</artifactId>
-        <version>1.6.40-SNAPSHOT</version>
+        <version>1.6.40</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>teamcity-maven-plugin-tests</artifactId>
