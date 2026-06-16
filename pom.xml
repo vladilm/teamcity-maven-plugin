@@ -3,7 +3,7 @@
   <groupId>org.jetbrains.teamcity</groupId>
   <artifactId>teamcity-maven-plugin-parent</artifactId>
   <packaging>pom</packaging>
-  <version>1.6.43-SNAPSHOT</version>
+  <version>1.6.43</version>
   <name>TeamCity Parent Plugin</name>
   <url>https://github.com/bade7n/teamcity-maven-plugin</url>
   <description>Aims to help developers build and package TeamCity plugins.</description>
@@ -59,7 +59,7 @@
   <scm>
     <connection>scm:git:ssh://git@github.com/bade7n/teamcity-maven-plugin.git</connection>
     <url>https://github.com/bade7n/teamcity-maven-plugin</url>
-    <tag>teamcity-maven-plugin-parent-1.6.40</tag>
+    <tag>teamcity-maven-plugin-parent-1.6.43</tag>
   </scm>
 
   <licenses>
