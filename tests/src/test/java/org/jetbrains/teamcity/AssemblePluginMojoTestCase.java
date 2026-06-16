@@ -132,6 +132,7 @@ public class AssemblePluginMojoTestCase extends BasePluginTestCase {
 
         assertThat(secondMojo.getAgentPluginWorkflow()).isNull();
         assertThat(secondMojo.getServerPluginWorkflow()).isNull();
+        assertThat(secondSession.getCurrentProject().getProperties().getProperty("maven.install.skip")).isEqualTo("true");
         assertThat(secondMojo.getAttachedArtifact()).hasSize(firstArtifacts.size());
 
         for (org.apache.maven.artifact.Artifact artifact : secondMojo.getAttachedArtifact()) {

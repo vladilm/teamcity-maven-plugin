@@ -41,6 +41,8 @@ import java.util.Optional;
         requiresDependencyCollection = ResolutionScope.TEST
 )
 public class AssemblePluginMojo extends BaseTeamCityMojo {
+    private static final String MAVEN_INSTALL_SKIP_PROPERTY = "maven.install.skip";
+
     @Parameter(defaultValue = "${project.remoteProjectRepositories}")
     private List<RemoteRepository> projectRepos;
 
@@ -139,6 +141,7 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                 }
                 if (checkResult.isUpToDate()) {
                     getLog().info("TeamCity Assemble is up-to-date, skipping");
+                    getProject().getProperties().setProperty(MAVEN_INSTALL_SKIP_PROPERTY, "true");
                     attachArtifacts(incrementalSupport.restoreAttachedArtifacts(previousState));
                     return;
                 }
