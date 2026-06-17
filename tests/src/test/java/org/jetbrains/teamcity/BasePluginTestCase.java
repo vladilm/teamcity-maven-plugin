@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -65,14 +66,18 @@ public abstract class BasePluginTestCase {
             projects.add(0, project);
             MavenSession session = rule.newMavenSession(project);
             session.setProjects(projects);
-            File repoFile = new File(getTestDir(projectBase), "repo");
-            populateSharedTestRepo(repoFile.toPath());
+            File repoFile = getBuildPreparedLocalRepository();
             ArtifactRepository localRepo = createLocalArtifactRepository(repoFile);
             LocalRepository localRepository = createLocalRepository(repoFile);
+            session.getRequest().setOffline(true);
             session.getRequest().setLocalRepository(localRepo);
+            session.getRequest().setLocalRepositoryPath(repoFile);
+            session.getRequest().setRemoteRepositories(Collections.emptyList());
+            session.getRequest().setPluginArtifactRepositories(Collections.emptyList());
             LocalRepositoryManager lrm = rule.getContainer().lookup(SimpleLocalRepositoryManagerFactory.class)
                     .newInstance(session.getRepositorySession(), localRepository);
             DefaultRepositorySystemSession repositorySession = (DefaultRepositorySystemSession) session.getRepositorySession();
+            repositorySession.setOffline(true);
             repositorySession.setWorkspaceReader(new MavenWorkspaceReader() {
                 @Override
                 public Model findModel(Artifact artifact) {
@@ -111,10 +116,24 @@ public abstract class BasePluginTestCase {
                 }
             });
             repositorySession.setLocalRepositoryManager(lrm);
+            for (MavenProject p : projects) {
+                p.setRemoteArtifactRepositories(Collections.singletonList(localRepo));
+                p.setPluginArtifactRepositories(Collections.singletonList(localRepo));
+            }
             return session;
         }  catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private File getBuildPreparedLocalRepository() throws URISyntaxException {
+        String configured = System.getProperty("teamcity.maven.plugin.test.localRepo");
+        if (configured != null && !configured.trim().isEmpty()) {
+            return new File(configured);
+        }
+
+        Path testClasses = Path.of(BasePluginTestCase.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        return testClasses.getParent().resolve("test-local-repo").toFile();
     }
 
     private List<MavenProject> getMavenProjectList(String projectBase, List<String> modules) {
@@ -144,40 +163,6 @@ public abstract class BasePluginTestCase {
                 new ArtifactRepositoryPolicy( true, ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS, ArtifactRepositoryPolicy.CHECKSUM_POLICY_IGNORE )
 
         );
-    }
-
-    private void populateSharedTestRepo(Path localRepo) throws IOException, URISyntaxException {
-        java.net.URL sharedRepoUrl = AssemblePluginMojo.class.getClassLoader().getResource("repo");
-        if (sharedRepoUrl == null) {
-            return;
-        }
-
-        Path sharedRepo = Path.of(sharedRepoUrl.toURI());
-        if (!Files.isDirectory(sharedRepo)) {
-            return;
-        }
-
-        Files.createDirectories(localRepo);
-        try (Stream<Path> stream = Files.walk(sharedRepo)) {
-            stream.forEach(source -> copySharedRepoEntry(sharedRepo, localRepo, source));
-        }
-    }
-
-    private void copySharedRepoEntry(Path sharedRepo, Path localRepo, Path source) {
-        try {
-            Path relative = sharedRepo.relativize(source);
-            Path destination = localRepo.resolve(relative.toString());
-            if (Files.isDirectory(source)) {
-                Files.createDirectories(destination);
-                return;
-            }
-            if (!Files.exists(destination)) {
-                Files.createDirectories(destination.getParent());
-                Files.copy(source, destination);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private static <T> boolean eq(T s1, T s2) {

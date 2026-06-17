@@ -11,6 +11,7 @@
 
     <properties>
         <maven.compiler.release>15</maven.compiler.release>
+        <teamcity.test.localRepo>${project.build.directory}/test-local-repo</teamcity.test.localRepo>
     </properties>
 
     <dependencies>
@@ -101,9 +102,87 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.7.1</version>
+                <executions>
+                    <execution>
+                        <id>prepare-unit-test-local-repo</id>
+                        <phase>process-test-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <localRepositoryDirectory>${teamcity.test.localRepo}</localRepositoryDirectory>
+                            <outputDirectory>${project.build.directory}/prepared-test-artifacts</outputDirectory>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>commons-beanutils</groupId>
+                                    <artifactId>commons-beanutils-core</artifactId>
+                                    <version>1.8.3</version>
+                                    <type>jar</type>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>commons-beanutils</groupId>
+                                    <artifactId>commons-beanutils-core</artifactId>
+                                    <version>1.8.3</version>
+                                    <type>pom</type>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>commons-logging</groupId>
+                                    <artifactId>commons-logging</artifactId>
+                                    <version>1.1.1</version>
+                                    <type>jar</type>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>commons-logging</groupId>
+                                    <artifactId>commons-logging</artifactId>
+                                    <version>1.1.1</version>
+                                    <type>pom</type>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>commons-codec</groupId>
+                                    <artifactId>commons-codec</artifactId>
+                                    <version>1.15</version>
+                                    <type>jar</type>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>commons-codec</groupId>
+                                    <artifactId>commons-codec</artifactId>
+                                    <version>1.15</version>
+                                    <type>pom</type>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>commons-io</groupId>
+                                    <artifactId>commons-io</artifactId>
+                                    <version>2.2</version>
+                                    <type>jar</type>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>commons-io</groupId>
+                                    <artifactId>commons-io</artifactId>
+                                    <version>2.2</version>
+                                    <type>pom</type>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <release>15</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <teamcity.maven.plugin.test.localRepo>${teamcity.test.localRepo}</teamcity.maven.plugin.test.localRepo>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>
