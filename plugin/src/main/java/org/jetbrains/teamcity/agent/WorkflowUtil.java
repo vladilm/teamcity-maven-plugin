@@ -8,21 +8,16 @@ import org.apache.maven.archiver.MavenArchiver;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.factory.ArtifactFactory;
-import org.apache.maven.artifact.resolver.filter.ArtifactFilter;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.shared.artifact.filter.StrictPatternExcludesArtifactFilter;
-import org.apache.maven.shared.artifact.filter.StrictPatternIncludesArtifactFilter;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
-import org.apache.maven.shared.dependency.graph.filter.AndDependencyNodeFilter;
-import org.apache.maven.shared.dependency.graph.filter.ArtifactDependencyNodeFilter;
-import org.apache.maven.shared.dependency.graph.filter.DependencyNodeFilter;
-import org.apache.maven.shared.dependency.graph.internal.ConflictData;
-import org.apache.maven.shared.dependency.graph.traversal.*;
+import org.apache.maven.shared.dependency.graph.traversal.BuildingDependencyNodeVisitor;
+import org.apache.maven.shared.dependency.graph.traversal.DependencyNodeVisitor;
+import org.apache.maven.shared.dependency.graph.traversal.SerializingDependencyNodeVisitor;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -38,7 +33,6 @@ import org.jetbrains.teamcity.data.ResolvedArtifact;
 import org.jetbrains.teamcity.velocity.NullTool;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.*;
@@ -49,8 +43,6 @@ import java.util.stream.Stream;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.apache.maven.artifact.ArtifactUtils.key;
-import static org.jetbrains.teamcity.ServerPluginWorkflow.TEAMCITY_PLUGIN_CLASSIFIER;
-import static org.jetbrains.teamcity.agent.AgentPluginWorkflow.TEAMCITY_AGENT_PLUGIN_CLASSIFIER;
 
 @Data
 public class WorkflowUtil {
@@ -65,6 +57,7 @@ public class WorkflowUtil {
     private final ArtifactFactory artifactFactory;
 
     private final ArchiverManager archiverManager;
+    private final DependencyArtifactSelector artifactSelector;
     private String outputTimestamp;
     private MavenSession session;
 
@@ -78,6 +71,7 @@ public class WorkflowUtil {
         this.archiverManager = archiverManager;
         this.outputTimestamp = outputTimestamp;
         this.session = session;
+        this.artifactSelector = new DependencyArtifactSelector();
     }
 
     public Path createDir(Path path) {
@@ -190,94 +184,10 @@ public class WorkflowUtil {
 
 
     public List<Artifact> getDependencyNodeList(DependencyNode rootNode, String spec, List<String> exclusions) {
-        List<DependencyNode> nodes;
-        // looking for the nodes specified by user
-        if (Arrays.asList("*", ".").contains(spec)) {
-            nodes = Collections.singletonList(rootNode);
-        } else {
-            List<String> patterns = Arrays.asList(spec.split(","));
-            nodes = collectNodes(rootNode, new StrictPatternIncludesArtifactFilter(patterns));
-        }
-        // getting transitive dependencies excluding ones specified in exclusions filter. Not to include teamcity-core by mistake for example.
         StringWriter writer = new StringWriter();
-        CollectingDependencyNodeVisitor transitiveCollectingVisitor = new CollectingDependencyNodeVisitor();
-        MultipleDependencyNodeVisitor mdnv = new MultipleDependencyNodeVisitor(Arrays.asList(transitiveCollectingVisitor, getSerializingDependencyNodeVisitor(writer)));
-        DependencyNodeFilter exclusionFilter = new ArtifactDependencyNodeFilter(new StrictPatternExcludesArtifactFilter(exclusions));
-        AndDependencyNodeFilter andDependencyNodeFilter = new AndDependencyNodeFilter(exclusionFilter, it -> isParentClassifierIn(it, TEAMCITY_PLUGIN_CLASSIFIER, TEAMCITY_AGENT_PLUGIN_CLASSIFIER));
-        SkipFilteringDependencyNodeVisitor visitor = new SkipFilteringDependencyNodeVisitor(mdnv, andDependencyNodeFilter);
-        nodes.forEach(it -> it.accept(visitor));
+        List<Artifact> result = artifactSelector.getDependencyNodeList(rootNode, spec, exclusions, getSerializingDependencyNodeVisitor(writer));
         getLog().info("Dependencies according to spec " + spec + " -> " + writer.toString().replaceFirst("\\R+$", ""));
-        List<DependencyNode> nodes1 = transitiveCollectingVisitor.getNodes();
-        // now conflicted dependencies might be in list, need to find them and resolve to the right version
-        List<DependencyNode> result = new ArrayList<>();
-        for (DependencyNode node : nodes1) {
-            ConflictData cd = getPrivateField(node);
-            if (cd != null && cd.getWinnerVersion() != null) {
-                List<DependencyNode> substitutions = findSubstitutions(rootNode, node, cd.getWinnerVersion());
-                CollectingDependencyNodeVisitor collector = new CollectingDependencyNodeVisitor();
-                SkipFilteringDependencyNodeVisitor visitor1 = new SkipFilteringDependencyNodeVisitor(collector, exclusionFilter);
-                substitutions.forEach(it -> it.accept(visitor1));
-                result.addAll(collector.getNodes());
-            } else {
-                result.add(node);
-            }
-        }
-        return result.stream().map(DependencyNode::getArtifact).distinct().collect(Collectors.toList());
-    }
-
-    private boolean isParentClassifierIn(DependencyNode it, String s, String s1) {
-        if (it.getParent() != null && (Objects.equals(s, it.getParent().getArtifact().getClassifier()) ||
-                Objects.equals(s1, it.getParent().getArtifact().getClassifier()))) {
-            return false;
-        }
-        return true;
-    }
-
-    private List<DependencyNode> findSubstitutions(DependencyNode rootNode, DependencyNode node, String winnerVersion) {
-        Artifact a = node.getArtifact();
-        StringJoiner sj = new StringJoiner(":");
-        sj.add(a.getGroupId());
-        sj.add(a.getArtifactId());
-        sj.add(a.getType());
-        sj.add(winnerVersion);
-
-        StrictPatternIncludesArtifactFilter filter = new StrictPatternIncludesArtifactFilter(Collections.singletonList(sj.toString()));
-        AndDependencyNodeFilter nodeFilter = new AndDependencyNodeFilter(new ArtifactDependencyNodeFilter(filter), node1 -> node1 != node);
-        CollectingDependencyNodeVisitor collector = new CollectingDependencyNodeVisitor();
-        rootNode.accept(new FilteringDependencyNodeVisitor(collector, nodeFilter));
-        return collector.getNodes();
-    }
-
-
-    public SerializingDependencyNodeVisitor getSerializingDependencyNodeVisitor(Writer writer) {
-        return new SerializingDependencyNodeVisitor(writer, toGraphTokens(tokens));
-    }
-
-
-    private SerializingDependencyNodeVisitor.GraphTokens toGraphTokens(String theTokens) {
-        SerializingDependencyNodeVisitor.GraphTokens graphTokens;
-
-        if ("whitespace".equals(theTokens)) {
-            getLog().debug("+ Using whitespace tree tokens");
-
-            graphTokens = SerializingDependencyNodeVisitor.WHITESPACE_TOKENS;
-        } else if ("extended".equals(theTokens)) {
-            getLog().debug("+ Using extended tree tokens");
-
-            graphTokens = SerializingDependencyNodeVisitor.EXTENDED_TOKENS;
-        } else {
-            graphTokens = SerializingDependencyNodeVisitor.STANDARD_TOKENS;
-        }
-
-        return graphTokens;
-    }
-
-    private List<DependencyNode> collectNodes(DependencyNode rootNode, ArtifactFilter artifactFilter) {
-        CollectingDependencyNodeVisitor collectingVisitor = new CollectingDependencyNodeVisitor();
-        DependencyNodeVisitor firstPassVisitor = new FilteringDependencyNodeVisitor(collectingVisitor,
-                new ArtifactDependencyNodeFilter(artifactFilter));
-        rootNode.accept(firstPassVisitor);
-        return collectingVisitor.getNodes();
+        return result;
     }
 
     private void internalCopy(boolean failOnMissingDependencies, File source, Path destination, boolean isReactorProject) throws IOException {
@@ -299,17 +209,6 @@ public class WorkflowUtil {
         }
     }
 
-
-    private ConflictData getPrivateField(DependencyNode node) {
-        try {
-            Field f = node.getClass().getDeclaredField("data");
-            f.setAccessible(true);
-            Object o = f.get(node);
-            return (ConflictData) o;
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            return null;
-        }
-    }
 
     private boolean isReactorProject(Artifact a) {
         // reactorProjectList contains also a libraries, in order to distinguish we can check location (should be under project.basedir) somewhere or
@@ -571,6 +470,22 @@ public class WorkflowUtil {
         theRootNode.accept(visitor);
 
         return writer.toString();
+    }
+
+    private SerializingDependencyNodeVisitor getSerializingDependencyNodeVisitor(Writer writer) {
+        return new SerializingDependencyNodeVisitor(writer, toGraphTokens(tokens));
+    }
+
+    private SerializingDependencyNodeVisitor.GraphTokens toGraphTokens(String theTokens) {
+        if ("whitespace".equals(theTokens)) {
+            getLog().debug("+ Using whitespace tree tokens");
+            return SerializingDependencyNodeVisitor.WHITESPACE_TOKENS;
+        }
+        if ("extended".equals(theTokens)) {
+            getLog().debug("+ Using extended tree tokens");
+            return SerializingDependencyNodeVisitor.EXTENDED_TOKENS;
+        }
+        return SerializingDependencyNodeVisitor.STANDARD_TOKENS;
     }
 
     public AgentPluginWorkflow createAgentWorkflow(DependencyNode rootNode, Agent agent) {
