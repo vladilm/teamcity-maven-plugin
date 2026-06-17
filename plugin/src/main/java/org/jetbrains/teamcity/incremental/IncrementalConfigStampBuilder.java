@@ -18,7 +18,6 @@ public class IncrementalConfigStampBuilder {
     private final Agent agent;
     private final Server server;
     private final MojoExecution execution;
-    private final boolean createIdeaArtifacts;
     private final String includes;
     private final String excludes;
     private final String ignoreExtraFilesIn;
@@ -28,18 +27,16 @@ public class IncrementalConfigStampBuilder {
                                          Agent agent,
                                          Server server,
                                          MojoExecution execution,
-                                         boolean createIdeaArtifacts,
                                          String includes,
                                          String excludes,
                                          String ignoreExtraFilesIn) {
-        this(project, agent, server, execution, createIdeaArtifacts, includes, excludes, ignoreExtraFilesIn, null);
+        this(project, agent, server, execution, includes, excludes, ignoreExtraFilesIn, null);
     }
 
     public IncrementalConfigStampBuilder(MavenProject project,
                                          Agent agent,
                                          Server server,
                                          MojoExecution execution,
-                                         boolean createIdeaArtifacts,
                                          String includes,
                                          String excludes,
                                          String ignoreExtraFilesIn,
@@ -48,7 +45,6 @@ public class IncrementalConfigStampBuilder {
         this.agent = agent;
         this.server = server;
         this.execution = execution;
-        this.createIdeaArtifacts = createIdeaArtifacts;
         this.includes = includes;
         this.excludes = excludes;
         this.ignoreExtraFilesIn = ignoreExtraFilesIn;
@@ -61,7 +57,6 @@ public class IncrementalConfigStampBuilder {
         appendConfigValue(builder, "project.artifactId", project.getArtifactId());
         appendConfigValue(builder, "project.version", project.getVersion());
         appendConfigValue(builder, "execution.id", execution == null ? null : execution.getExecutionId());
-        appendConfigValue(builder, "createIdeaArtifacts", Boolean.toString(createIdeaArtifacts));
         appendConfigValue(builder, "includes", includes);
         appendConfigValue(builder, "excludes", excludes);
         appendConfigValue(builder, "ignoreExtraFilesIn", ignoreExtraFilesIn);

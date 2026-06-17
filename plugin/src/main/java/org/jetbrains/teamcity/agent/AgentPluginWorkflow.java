@@ -7,7 +7,6 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.jetbrains.teamcity.Agent;
-import org.jetbrains.teamcity.ArtifactBuilder;
 import org.jetbrains.teamcity.data.ResolvedArtifact;
 
 import java.io.File;
@@ -21,7 +20,7 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.jetbrains.teamcity.agent.WorkflowUtil.TEAMCITY_PLUGIN_XML;
 
 @Data
-public class AgentPluginWorkflow implements ArtifactListProvider {
+public class AgentPluginWorkflow {
     public static final String TEAMCITY_AGENT_PLUGIN_CLASSIFIER = "teamcity-agent-plugin";
     public static final String TEAMCITY_TOOL_CLASSIFIER = "teamcity-tool";
     private final DependencyNode rootNode;
@@ -32,31 +31,19 @@ public class AgentPluginWorkflow implements ArtifactListProvider {
 
     private final List<ResultArtifact> attachedArtifacts = new ArrayList<>();
 
-    private final Path workDirectory;
-
-    private final boolean createIdeaArtifacts;
-
     private Path agentPath;
     private Path pluginDescriptorPath;
 
-    private final List<Path> ideaArtifactList = new ArrayList<>();
-
-    public void execute() throws MojoExecutionException {
+    public List<ResultArtifact> execute() throws MojoExecutionException {
         if (parameters.isNeedToBuild()) {
             AssemblyContext assemblyContext = buildAgentPlugin(rootNode);
             assemblyContexts.add(assemblyContext);
         }
-        if (isCreateIdeaArtifacts()) {
-            ideaArtifactList.addAll(new ArtifactBuilder(util.getLog(), util).build(getAssemblyContexts(), parameters.getIntellijProjectPath()));
-        }
-    }
-
-    public boolean isApplicable() {
-        return createIdeaArtifacts;
+        return attachedArtifacts;
     }
 
     public AssemblyContext buildAgentPlugin(DependencyNode rootNode) throws MojoExecutionException {
-        Path agentUnpacked = workDirectory.resolve("agent-unpacked");
+        Path agentUnpacked = util.getWorkDirectory().resolve("agent-unpacked");
         agentPath  = util.createDir(agentUnpacked.resolve(parameters.getPluginName()));
         AssemblyContext assemblyContext = util.createAssemblyContext("AGENT", "EXPLODED", agentPath);
 
@@ -85,7 +72,7 @@ public class AgentPluginWorkflow implements ArtifactListProvider {
             File targetDescriptorPath = parameters.getDescriptor().getPath();
             if (!targetDescriptorPath.exists() && !parameters.getDescriptor().isDoNotGenerate()) {
                 try {
-                    Path generatedPath = workDirectory.resolve("teamcity-agent-plugin-generated.xml");
+                    Path generatedPath = util.getWorkDirectory().resolve("teamcity-agent-plugin-generated.xml");
                     util.createDescriptor("teamcity-agent-plugin.vm", generatedPath, parameters);
                     targetDescriptorPath = generatedPath.toFile();
                 } catch (IOException e) {
@@ -110,7 +97,7 @@ public class AgentPluginWorkflow implements ArtifactListProvider {
                 util.processExtras(parameters.getExtras(), parameters.isRemoveVersionFromJar(), agentPath, assemblyContext, destinations);
             }
 
-            Path agentPluginPath = workDirectory.resolve("agent");
+            Path agentPluginPath = util.getWorkDirectory().resolve("agent");
             try {
                 String zipName = parameters.getPluginName() + ".zip";
                 AssemblyContext zipAssemblyContext = util.createAssemblyContext("AGENT", agentPluginPath);

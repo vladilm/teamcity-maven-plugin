@@ -17,7 +17,6 @@ import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.LocalRepositoryManager;
 import org.eclipse.aether.repository.WorkspaceRepository;
 import org.jetbrains.teamcity.agent.AgentPluginWorkflow;
-import org.jetbrains.teamcity.agent.ArtifactListProvider;
 import org.jetbrains.teamcity.agent.ResultArtifact;
 import org.junit.After;
 import org.junit.Assert;
@@ -187,15 +186,6 @@ public abstract class BasePluginTestCase {
 
     private boolean equalArtifacts(MavenProject it, Artifact artifact) {
         return eq(it.getArtifact().getGroupId(), artifact.getGroupId()) && eq(it.getArtifact().getArtifactId(), artifact.getArtifactId());
-    }
-
-    protected void assertIdeaArtifacts(ArtifactListProvider apl, String... s) throws IOException {
-        if (apl.isApplicable()) {
-            assertThat(apl.getIdeaArtifactList()).hasSize(s.length);
-            for (int i = 0; i < s.length; i++) {
-                filesAreEqual(apl.getIdeaArtifactList().get(i), s[i]);
-            }
-        }
     }
 
     protected void filesAreEqual(Path path, String expected) throws IOException {

@@ -37,67 +37,6 @@ public class ModuleWarTestCase extends BasePluginTestCase {
                 server/lib/3
                 server/module-war-teamcity-plugin-resources.jar
                 teamcity-plugin.xml""");
-        // language=XML
-        assertIdeaArtifacts(mojo.getServerPluginWorkflow(), """
-<component name="ArtifactManager">
-    <artifact name="TC::SERVER::module-war::EXPLODED">
-        <output-path>$PROJECT_DIR$/target/teamcity/plugin/module-war</output-path>
-        <root id="root">
-            <element id="file-copy" output-file-name="teamcity-plugin.xml" path="$PROJECT_DIR$/target/teamcity/teamcity-plugin-generated.xml"/>
-            <element id="directory" name="server">
-                <element id="archive" name="module-war-teamcity-plugin-resources.jar">
-                    <element id="directory" name="buildServerResources">
-                        <element id="dir-copy" path="$PROJECT_DIR$/src/main/webapp/plugins/module-war"/>
-                    </element>
-                </element>
-                <element id="directory" name="lib">
-                    <element id="dir-copy" path="$PROJECT_DIR$/2"/>
-                </element>
-            </element>
-            <element id="directory" name="agent">
-                <element id="archive" name="module-agent.zip">
-                    <element artifact-name="TC::AGENT::module-agent::EXPLODED" id="artifact"/>
-                </element>
-            </element>
-            <element id="file-copy" path="$PROJECT_DIR$/1"/>
-        </root>
-    </artifact>
-</component>
-""", """
-<component name="ArtifactManager">
-    <artifact name="TC::SERVER::module-war::4IDEA">
-        <output-path>$PROJECT_DIR$/target/teamcity/plugin</output-path>
-        <root id="root">
-            <element id="directory" name="module-war">
-                <element artifact-name="TC::SERVER::module-war::EXPLODED" id="artifact"/>
-            </element>
-        </root>
-    </artifact>
-</component>
-""", """
-<component name="ArtifactManager">
-    <artifact name="TC::SERVER::module-war">
-        <output-path>$PROJECT_DIR$/target/teamcity/dist</output-path>
-        <root id="root">
-            <element id="archive" name="module-war.zip">
-                <element artifact-name="TC::SERVER::module-war::EXPLODED" id="artifact"/>
-            </element>
-        </root>
-    </artifact>
-</component>
-""", """
-<component name="ArtifactManager">
-    <artifact name="TC::SERVER-PACKED::module-war">
-        <output-path>$PROJECT_DIR$/target/teamcity/dist</output-path>
-        <root id="root">
-            <element id="archive" name="module-war-packed.zip">
-                <element artifact-name="TC::SERVER::module-war::4IDEA" id="artifact"/>
-            </element>
-        </root>
-    </artifact>
-</component>
-""");
-
     }
         @Test
     public void testAgentArtifact() throws Exception {
@@ -142,45 +81,6 @@ public class ModuleWarTestCase extends BasePluginTestCase {
                                 <tool name="plugin2"/>
                         </dependencies>
                 </teamcity-agent-plugin>""");
-
-
-        this.assertIdeaArtifacts(mojo.getAgentPluginWorkflow(),"""
-                <component name="ArtifactManager">
-                    <artifact name="TC::AGENT::module-agent::4IDEA">
-                        <output-path>$PROJECT_DIR$/target/teamcity/agent-unpacked</output-path>
-                        <root id="root">
-                            <element id="directory" name="module-agent">
-                                <element artifact-name="TC::AGENT::module-agent::EXPLODED" id="artifact"/>
-                            </element>
-                        </root>
-                    </artifact>
-                </component>
-                """, """
-                <component name="ArtifactManager">
-                    <artifact name="TC::AGENT::module-agent">
-                        <output-path>$PROJECT_DIR$/target/teamcity/agent</output-path>
-                        <root id="root">
-                            <element id="archive" name="module-agent.zip">
-                                <element artifact-name="TC::AGENT::module-agent::EXPLODED" id="artifact"/>
-                            </element>
-                        </root>
-                    </artifact>
-                </component>
-                """, """
-                <component name="ArtifactManager">
-                    <artifact name="TC::AGENT::module-agent::EXPLODED">
-                        <output-path>$PROJECT_DIR$/target/teamcity/agent-unpacked/module-agent</output-path>
-                        <root id="root">
-                            <element id="directory" name="lib">
-                                <element id="archive" name="module-agent-1.1.jar">
-                                    <element id="module-output" name="module-agent"/>
-                                </element>
-                            </element>
-                            <element id="file-copy" output-file-name="teamcity-plugin.xml" path="$PROJECT_DIR$/target/teamcity/teamcity-agent-plugin-generated.xml"/>
-                        </root>
-                    </artifact>
-                </component>
-                """);
     }
 
     @Test

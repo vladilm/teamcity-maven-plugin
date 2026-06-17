@@ -30,7 +30,7 @@ import static org.jetbrains.teamcity.agent.AgentPluginWorkflow.TEAMCITY_TOOL_CLA
 import static org.jetbrains.teamcity.agent.WorkflowUtil.TEAMCITY_PLUGIN_XML;
 
 @Data
-public class ServerPluginWorkflow implements ArtifactListProvider {
+public class ServerPluginWorkflow {
     public static final String TEAMCITY_PLUGIN_CLASSIFIER = "teamcity-plugin";
     public static final String TEAMCITY_PLUGIN_CLASSIFIER_PACKED = "teamcity-plugin-packed";
     public static final String AGENT_SUBDIR = "agent";
@@ -42,10 +42,6 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
 
     private final MavenProject project;
 
-    private final Path workDirectory;
-
-    private final boolean createIdeaArtifacts;
-
     private final List<AssemblyContext> assemblyContexts = new ArrayList<>();
 
     private final List<ResultArtifact> attachedArtifacts = new ArrayList<>();
@@ -56,13 +52,12 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
 
     private Path pluginDescriptorPath;
 
-    private final List<Path> ideaArtifactList = new ArrayList<>();
-
     private List<String> webappPaths = new ArrayList<>();
 
+    // Server need to know the original agent spec to exclude transitive agent dependencies
     private String agentSpec;
 
-    public void execute() throws MojoExecutionException, IOException, MojoFailureException {
+    public List<ResultArtifact> execute() throws MojoExecutionException, IOException, MojoFailureException {
         if (parameters.isNeedToBuild()) {
             {
                 Optional<Plugin> plugin = getProject().getBuildPlugins().stream().filter(it -> it.getArtifactId().equalsIgnoreCase("maven-war-plugin")).findFirst();
@@ -104,14 +99,7 @@ public class ServerPluginWorkflow implements ArtifactListProvider {
             attachedArtifacts.add(new ResultArtifact("zip", TEAMCITY_PLUGIN_CLASSIFIER, plugin, zipAssemblyContext));
             attachedArtifacts.add(new ResultArtifact("zip", TEAMCITY_PLUGIN_CLASSIFIER_PACKED, pluginPacked, zipPackedAssemblyContext));
         }
-
-        if (isApplicable()) {
-            ideaArtifactList.addAll(new ArtifactBuilder(util.getLog(), util).build(getAssemblyContexts(), parameters.getIntellijProjectPath()));
-        }
-    }
-
-    public boolean isApplicable() {
-        return createIdeaArtifacts;
+        return attachedArtifacts;
     }
 
     private AssemblyContext buildServerPlugin(Path serverPluginRoot, DependencyNode rootNode) throws MojoExecutionException, IOException {

@@ -52,12 +52,6 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
     @Parameter(property = "ignoreExtraFilesIn")
     private String ignoreExtraFilesIn;
 
-    @Component(hint = "default")
-    private DependencyGraphBuilder dependencyGraphBuilder;
-
-    @Component
-    private MavenProjectHelper projectHelper;
-
     @Parameter(property = "includes")
     private String includes;
 
@@ -67,20 +61,14 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
     @Parameter(defaultValue = "${localRepository}", readonly = true, required = true)
     private ArtifactRepository local;
 
-    @Component
-    private LifecycleExecutor lifecycleExecutor;
     @Parameter( defaultValue = "${mojoExecution}", readonly = true )
     private MojoExecution execution;
+
     @Parameter( defaultValue = "${teamcity.plugin.version}", readonly = true )
     private String pluginVersion;
+
     @Parameter( defaultValue = "${plugin}", readonly = true )
     private PluginDescriptor pluginDescriptor;
-    @Component
-    private PluginManager pluginManager;
-
-
-    @Component
-    private LifeCyclePluginAnalyzer lifeCyclePluginAnalyzer;
 
     /**
      * TeamCity Agent configuration parameters.
@@ -97,8 +85,6 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
     @Getter
     @Setter
     private Server server;
-    @Parameter(defaultValue = "false")
-    private boolean createIdeaArtifacts = false;
 
     @Getter
     private AgentPluginWorkflow agentPluginWorkflow;
@@ -123,7 +109,6 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                     agent,
                     server,
                     execution,
-                    createIdeaArtifacts,
                     includes,
                     excludes,
                     ignoreExtraFilesIn,
@@ -150,23 +135,24 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                 getLog().info("TeamCity Assemble start");
             }
 
-            agentPluginWorkflow = new AgentPluginWorkflow(rootNode, agent, util, getWorkDirectory().toPath(), createIdeaArtifacts);
-            agentPluginWorkflow.execute();
-            attachArtifacts(agentPluginWorkflow.getAttachedArtifacts());
+            agentPluginWorkflow = util.createAgentWorkflow(rootNode, agent);
+            List<ResultArtifact> agentArtifacts = agentPluginWorkflow.execute();
+            attachArtifacts(agentArtifacts);
 
-            serverPluginWorkflow = new ServerPluginWorkflow(rootNode, server, util, getProject(), getWorkDirectory().toPath(), createIdeaArtifacts);
-            serverPluginWorkflow.getAgentAttachedRuntimeArtifacts().addAll(agentPluginWorkflow.getAttachedArtifacts());
+            serverPluginWorkflow = util.createServerWorkflow(rootNode, server);
+            serverPluginWorkflow.getAgentAttachedRuntimeArtifacts().addAll(agentArtifacts);
             serverPluginWorkflow.setAgentSpec(agent.getSpec());
             findPluginConfiguration().ifPresent(plugin -> serverPluginWorkflow.getPluginDependencies().addAll(plugin.getDependencies()));
-            serverPluginWorkflow.execute();
-            attachArtifacts(serverPluginWorkflow.getAttachedArtifacts());
+            List<ResultArtifact> serverArtifacts = serverPluginWorkflow.execute();
+            attachArtifacts(serverArtifacts);
 
-            List<ResultArtifact> attachedArtifacts = new ArrayList<ResultArtifact>();
-            attachedArtifacts.addAll(agentPluginWorkflow.getAttachedArtifacts());
-            attachedArtifacts.addAll(serverPluginWorkflow.getAttachedArtifacts());
-            IncrementalState currentState = incrementalSupport.collectCurrentState(rootNode);
-            incrementalSupport.saveState(currentState.withOutputs(attachedArtifacts));
-
+            if (incremental) {
+                List<ResultArtifact> attachedArtifacts = new ArrayList<>();
+                attachedArtifacts.addAll(agentArtifacts);
+                attachedArtifacts.addAll(serverArtifacts);
+                IncrementalState currentState = incrementalSupport.collectCurrentState(rootNode);
+                incrementalSupport.saveState(currentState.withOutputs(attachedArtifacts));
+            }
         } catch (IOException e) {
             getLog().warn(e);
             throw new MojoFailureException("Error while assembly execution", e);
@@ -208,8 +194,7 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
         if (pluginDescriptor.getPlugin() != null) {
             return Optional.of(pluginDescriptor.getPlugin());
         }
-        Optional<Plugin> p = getProject().getBuild().getPlugins().stream().filter(it -> match(it, this.pluginDescriptor)).findFirst();
-        return p;
+        return getProject().getBuild().getPlugins().stream().filter(it -> match(it, this.pluginDescriptor)).findFirst();
     }
 
     private boolean match(Plugin it, PluginDescriptor pluginDescriptor) {
@@ -219,22 +204,6 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
 
     public List<Artifact> getAttachedArtifact() {
         return getProject().getAttachedArtifacts();
-    }
-
-    public String getServerPluginName() {
-        return server.getPluginName();
-    }
-
-
-    public String getCustomAgentPluginName() {
-        return getProject().getArtifactId().equalsIgnoreCase(getAgentPluginName()) ? null : getAgentPluginName();
-    }
-
-    public String getAgentPluginName() {
-        if (this.agent.getPluginName() == null) {
-            return server.getPluginName();
-        }
-        return agent.getPluginName();
     }
 
     public void setFailOnMissingDependencies(boolean b) {

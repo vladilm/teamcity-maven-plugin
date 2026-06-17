@@ -79,24 +79,6 @@ public class WorkflowUtil {
         this.outputTimestamp = outputTimestamp;
         this.session = session;
     }
-//
-//    private Stream<Artifact> getArtifactList(MavenProject it) {
-//        try {
-//            Set<Artifact> artifacts = it.getArtifacts();
-//            return new ArrayList<Artifact>() {{
-//                add(it.getArtifact());
-//                addAll(artifacts);
-//            }}.stream();
-//        } catch (Exception e) {
-//            log.error("Error while getting list of artifacts from " + it.getName(), e);
-//            throw new RuntimeException(e);
-//        }
-//    }
-
-    public boolean isNeedToBuild(String a) {
-        return Jdk8Compat.isNotEmpty(a);
-    }
-
 
     public Path createDir(Path path) {
         try {
@@ -170,7 +152,6 @@ public class WorkflowUtil {
         }
 
     }
-
 
     private boolean shouldRemove(List<String> extraPaths, Path toPath, Path it) {
         if (extraPaths != null) {
@@ -590,5 +571,13 @@ public class WorkflowUtil {
         theRootNode.accept(visitor);
 
         return writer.toString();
+    }
+
+    public AgentPluginWorkflow createAgentWorkflow(DependencyNode rootNode, Agent agent) {
+        return new AgentPluginWorkflow(rootNode, agent, this);
+    }
+
+    public ServerPluginWorkflow createServerWorkflow(DependencyNode rootNode, Server server) {
+        return new ServerPluginWorkflow(rootNode, server, this, getProject());
     }
 }

@@ -61,7 +61,6 @@ public class IncrementalConfigStampBuilderTest {
                 agent,
                 server,
                 execution,
-                true,
                 "include",
                 "exclude",
                 "ignore-extra"
@@ -72,7 +71,6 @@ public class IncrementalConfigStampBuilderTest {
         assertThat(stamp).contains("project.groupId=jb.int");
         assertThat(stamp).contains("project.artifactId=sample-plugin");
         assertThat(stamp).contains("execution.id=build");
-        assertThat(stamp).contains("createIdeaArtifacts=true");
         assertThat(stamp).contains("includes=include");
         assertThat(stamp).contains("excludes=exclude");
         assertThat(stamp).contains("ignoreExtraFilesIn=ignore-extra");
