@@ -150,13 +150,6 @@ public class ServerPluginWorkflow {
         List<Path> uiSchemaDestinations = assembleUiSchemas(assemblyContext, serverPluginRoot);
         createdDestinations.addAll(uiSchemaDestinations);
 
-        if (parameters.isNeedToBuildCommon()) {
-            assemblyContext.getPaths().add(new PathSet(serverPluginRoot.resolve("common")));
-            Path commonPath = util.createDir(serverPluginRoot.resolve("common"));
-            List<Artifact> commonNodes = util.getDependencyNodeList(rootNode, parameters.getCommonSpec(), parameters.getCommonExclusions());
-            Pair<List<ResolvedArtifact>, List<Path>> copyResults1 = util.copyTransitiveDependenciesInto(parameters.isFailOnMissingDependencies(), parameters.isRemoveVersionFromJar(), assemblyContext, commonNodes, commonPath);
-            createdDestinations.addAll(copyResults1.getRight());
-        }
         if (parameters.hasExtras()) {
             util.processExtras(parameters.getExtras(), parameters.isRemoveVersionFromJar(), serverPluginRoot, assemblyContext, createdDestinations);
         }

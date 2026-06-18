@@ -10,12 +10,6 @@
                     <package>
                         org.jetbrains.teamcity:teamcity-maven-plugin:${project.version}:build
                     </package>
-                    <package>
-                        org.jetbrains.teamcity:teamcity-maven-plugin:${project.version}:build-agent
-                    </package>
-                    <package>
-                        org.jetbrains.teamcity:teamcity-maven-plugin:${project.version}:build-server
-                    </package>
                 </phases>
                 <default-phases>
                     <package>

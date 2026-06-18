@@ -18,8 +18,6 @@ public class Agent {
     private String spec;
     @Parameter(defaultValue = "${project.artifactId}")
     private String pluginName;
-    @Parameter(defaultValue = "")
-    private String intellijProjectPath;
     @Parameter(defaultValue = "org.jetbrains.teamcity,::zip")
     private List<String> exclusions;
     @Parameter

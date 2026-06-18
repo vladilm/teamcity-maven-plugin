@@ -53,16 +53,8 @@ public class IncrementalAssembleSupport {
         );
     }
 
-    public IncrementalState collectCurrentState() throws IOException {
-        return inputsCollector.collectCurrentState();
-    }
-
     public IncrementalState collectCurrentState(DependencyNode rootNode) throws IOException {
         return inputsCollector.collectCurrentState(rootNode);
-    }
-
-    public IncrementalCheckResult checkCurrentState(IncrementalState previous) throws IOException {
-        return inputsCollector.checkCurrentState(previous);
     }
 
     public IncrementalCheckResult checkCurrentState(IncrementalState previous, DependencyNode rootNode) throws IOException {

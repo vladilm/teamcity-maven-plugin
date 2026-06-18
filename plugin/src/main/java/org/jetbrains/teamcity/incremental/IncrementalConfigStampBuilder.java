@@ -73,7 +73,6 @@ public class IncrementalConfigStampBuilder {
         }
         appendConfigValue(builder, "agent.spec", agent.getSpec());
         appendConfigValue(builder, "agent.pluginName", agent.getPluginName());
-        appendConfigValue(builder, "agent.intellijProjectPath", agent.getIntellijProjectPath());
         appendConfigValue(builder, "agent.tool", Boolean.toString(agent.isTool()));
         appendConfigValue(builder, "agent.failOnMissingDependencies", Boolean.toString(agent.isFailOnMissingDependencies()));
         appendConfigValue(builder, "agent.removeVersionFromJar", Boolean.toString(agent.isRemoveVersionFromJar()));
@@ -90,14 +89,11 @@ public class IncrementalConfigStampBuilder {
         }
         appendConfigValue(builder, "server.spec", server.getSpec());
         appendConfigValue(builder, "server.pluginName", server.getPluginName());
-        appendConfigValue(builder, "server.intellijProjectPath", server.getIntellijProjectPath());
-        appendConfigValue(builder, "server.commonSpec", server.getCommonSpec());
         appendConfigValue(builder, "server.failOnMissingDependencies", Boolean.toString(server.isFailOnMissingDependencies()));
         appendConfigValue(builder, "server.excludeAgent", Boolean.toString(server.isExcludeAgent()));
         appendConfigValue(builder, "server.requireKotlinDsl", Boolean.toString(server.isRequireKotlinDsl()));
         appendConfigValue(builder, "server.removeVersionFromJar", Boolean.toString(server.isRemoveVersionFromJar()));
         appendList(builder, "server.exclusions", server.getExclusions());
-        appendList(builder, "server.commonExclusions", server.getCommonExclusions());
         appendList(builder, "server.buildServerResources", server.getBuildServerResources());
         appendList(builder, "server.ignoreExtraFilesIn", server.getIgnoreExtraFilesIn());
         appendList(builder, "server.toolDependencies", server.getToolDependencies());

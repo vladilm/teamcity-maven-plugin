@@ -44,11 +44,9 @@ public class IncrementalConfigStampBuilderTest {
         Server server = new Server();
         server.setSpec("c:d:*:*");
         server.setPluginName("server-plugin");
-        server.setCommonSpec("common:*");
         server.setExcludeAgent(false);
         server.setRequireKotlinDsl(true);
         server.setBuildServerResources(List.of("resources/a", "resources/b"));
-        server.setCommonExclusions(List.of("common-exclusion"));
         server.setToolDependencies(List.of("tool-a"));
         server.setExtras(List.of(extra("server-source.jar", "server", "server.jar")));
         server.setKotlinDslDescriptorsPath(new File("target/kdsl"));

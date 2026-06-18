@@ -17,18 +17,12 @@ public class Server {
     private String spec;
     @Parameter(defaultValue = "${project.artifactId}")
     private String pluginName;
-    @Parameter(defaultValue = "")
-    private String intellijProjectPath;
     @Parameter
     private Descriptor descriptor = new Descriptor();
     @Parameter(defaultValue = "org.jetbrains.teamcity")
     private List<String> exclusions;
     @Parameter(property = "buildServerResources")
     private List<String> buildServerResources;
-    @Parameter
-    private String commonSpec;
-    @Parameter(defaultValue = "org.jetbrains.teamcity")
-    private List<String> commonExclusions;
     @Parameter(defaultValue = "${project.build.outputDirectory}/kotlin-dsl")
     private File kotlinDslDescriptorsPath;
     @Parameter(defaultValue = "${project.build.outputDirectory}/ui-schemas")
@@ -58,9 +52,6 @@ public class Server {
         if (exclusions == null) {
             exclusions = Jdk8Compat.of("org.jetbrains.teamcity");
         }
-        if (commonExclusions == null) {
-            commonExclusions = Jdk8Compat.of("org.jetbrains.teamcity");
-        }
         if (buildServerResources == null) {
             buildServerResources = new ArrayList<>();
         }
@@ -79,10 +70,6 @@ public class Server {
 
     private boolean ntb(String spec) {
         return Jdk8Compat.isNotEmpty(spec);
-    }
-
-    public boolean isNeedToBuildCommon() {
-        return ntb(commonSpec);
     }
 
     public boolean hasExtras() {
