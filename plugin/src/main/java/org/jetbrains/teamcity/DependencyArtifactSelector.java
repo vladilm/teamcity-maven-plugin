@@ -26,10 +26,6 @@ import java.util.stream.Collectors;
 import static org.jetbrains.teamcity.ServerPluginWorkflow.TEAMCITY_PLUGIN_CLASSIFIER;
 
 public class DependencyArtifactSelector {
-    public List<Artifact> getDependencyNodeList(DependencyNode rootNode, String spec, List<String> exclusions) {
-        return getDependencyNodeList(rootNode, spec, exclusions, null);
-    }
-
     public List<Artifact> getDependencyNodeList(DependencyNode rootNode, String spec, List<String> exclusions, DependencyNodeVisitor reportingVisitor) {
         List<DependencyNode> nodes;
         if (Arrays.asList("*", ".").contains(spec)) {

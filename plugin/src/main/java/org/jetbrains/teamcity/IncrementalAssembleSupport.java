@@ -5,9 +5,11 @@ import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.jetbrains.teamcity.agent.ResultArtifact;
+import org.jetbrains.teamcity.incremental.DependencyInputs;
 import org.jetbrains.teamcity.incremental.FileSnapshotter;
 import org.jetbrains.teamcity.incremental.IncrementalAssembleCore;
 import org.jetbrains.teamcity.incremental.IncrementalCheckResult;
+import org.jetbrains.teamcity.incremental.IncrementalDependencyInputsCollector;
 import org.jetbrains.teamcity.incremental.IncrementalState;
 import org.jetbrains.teamcity.incremental.IncrementalStateStore;
 import org.jetbrains.teamcity.incremental.MavenIncrementalInputsCollector;
@@ -22,6 +24,7 @@ public class IncrementalAssembleSupport {
     private final IncrementalAssembleCore core;
     private final IncrementalStateStore stateStore;
     private final MavenIncrementalInputsCollector inputsCollector;
+    private final IncrementalDependencyInputsCollector dependencyInputsCollector;
 
     public IncrementalAssembleSupport(MavenProject project,
                                       MavenSession session,
@@ -36,6 +39,7 @@ public class IncrementalAssembleSupport {
                                       String incrementalSnapshotExcludes) {
         this.core = new IncrementalAssembleCore();
         this.stateStore = new IncrementalStateStore(workDirectory.resolve(".assemble-state.properties"));
+        this.dependencyInputsCollector = new IncrementalDependencyInputsCollector();
         this.inputsCollector = new MavenIncrementalInputsCollector(
                 project,
                 session,
@@ -53,12 +57,16 @@ public class IncrementalAssembleSupport {
         );
     }
 
-    public IncrementalState collectCurrentState(DependencyNode rootNode) throws IOException {
-        return inputsCollector.collectCurrentState(rootNode);
+    public DependencyInputs collectDependencyInputs(DependencyNode rootNode) {
+        return dependencyInputsCollector.collect(rootNode);
     }
 
-    public IncrementalCheckResult checkCurrentState(IncrementalState previous, DependencyNode rootNode) throws IOException {
-        return inputsCollector.checkCurrentState(previous, rootNode);
+    public IncrementalState collectCurrentState(DependencyInputs dependencyInputs) throws IOException {
+        return inputsCollector.collectCurrentState(dependencyInputs);
+    }
+
+    public IncrementalCheckResult checkCurrentState(IncrementalState previous, DependencyInputs dependencyInputs) throws IOException {
+        return inputsCollector.checkCurrentState(previous, dependencyInputs);
     }
 
     public IncrementalCheckResult checkCheapState(IncrementalState previous) {

@@ -4,7 +4,6 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.shared.dependency.graph.DependencyNode;
 import org.jetbrains.teamcity.Agent;
 import org.jetbrains.teamcity.Server;
 import org.jetbrains.teamcity.SourceDest;
@@ -32,7 +31,6 @@ public class MavenIncrementalInputsCollector {
     private final IncrementalAssembleCore core;
     private final ReactorInputStateResolver reactorStateResolver;
     private final IncrementalConfigStampBuilder configStampBuilder;
-    private final DependencyTreeInputBuilder dependencyTreeInputBuilder;
     private final Server server;
 
     public MavenIncrementalInputsCollector(MavenProject project,
@@ -85,7 +83,6 @@ public class MavenIncrementalInputsCollector {
         this.fileSnapshotter = fileSnapshotter;
         this.core = new IncrementalAssembleCore();
         this.reactorStateResolver = new ReactorInputStateResolver(project, session, fileSnapshotter, stateStore);
-        this.dependencyTreeInputBuilder = new DependencyTreeInputBuilder();
         this.configStampBuilder = new IncrementalConfigStampBuilder(
                 project,
                 agent,
@@ -102,9 +99,9 @@ public class MavenIncrementalInputsCollector {
         return collectCurrentState(null);
     }
 
-    public IncrementalState collectCurrentState(DependencyNode rootNode) throws IOException {
+    public IncrementalState collectCurrentState(DependencyInputs dependencyInputs) throws IOException {
         ListInputSink sink = new ListInputSink();
-        collectDependencyInputs(sink, rootNode);
+        collectDependencyInputs(sink, dependencyInputs);
         collectFileInputs(sink);
         return buildState(configStampBuilder.build(), sink.getInputs());
     }
@@ -113,7 +110,7 @@ public class MavenIncrementalInputsCollector {
         return checkCurrentState(previous, null);
     }
 
-    public IncrementalCheckResult checkCurrentState(IncrementalState previous, DependencyNode rootNode) throws IOException {
+    public IncrementalCheckResult checkCurrentState(IncrementalState previous, DependencyInputs dependencyInputs) throws IOException {
         IncrementalCheckResult cheapResult = checkCheapState(previous);
         if (cheapResult.isComplete()) {
             return cheapResult;
@@ -122,7 +119,7 @@ public class MavenIncrementalInputsCollector {
         CheckingInputSink sink = new CheckingInputSink(previous.getInputs());
         String currentConfigStamp = configStampBuilder.build();
         try {
-            collectDependencyInputs(sink, rootNode);
+            collectDependencyInputs(sink, dependencyInputs);
             collectFileInputs(sink);
         } catch (EarlyIncrementalMiss e) {
             return IncrementalCheckResult.miss(e.getMessage());
@@ -195,10 +192,10 @@ public class MavenIncrementalInputsCollector {
         return state;
     }
 
-    private void collectDependencyInputs(InputSink sink, DependencyNode rootNode) throws IOException {
-        if (rootNode != null) {
-            sink.add(dependencyTreeInputBuilder.buildTreeInput(rootNode));
-            addDependencyInputs(sink, dependencyTreeInputBuilder.collectDependencyArtifacts(rootNode));
+    private void collectDependencyInputs(InputSink sink, DependencyInputs dependencyInputs) throws IOException {
+        if (dependencyInputs != null) {
+            sink.add(dependencyInputs.getTreeInput());
+            addDependencyInputs(sink, dependencyInputs.getArtifacts());
         }
     }
 

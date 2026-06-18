@@ -15,8 +15,8 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class DependencyTreeInputBuilderTest {
-    private final DependencyTreeInputBuilder builder = new DependencyTreeInputBuilder();
+public class IncrementalDependencyInputsCollectorTest {
+    private final IncrementalDependencyInputsCollector collector = new IncrementalDependencyInputsCollector();
 
     @Test
     public void releaseNodeStopsTraversalAtReleaseBoundary() {
@@ -27,12 +27,12 @@ public class DependencyTreeInputBuilderTest {
                 node("release-lib", "1.0",
                         node("new-transitive", "2.0")));
 
-        InputState firstInput = builder.buildTreeInput(first);
-        InputState secondInput = builder.buildTreeInput(second);
+        DependencyInputs firstInput = collector.collect(first);
+        DependencyInputs secondInput = collector.collect(second);
 
-        assertThat(secondInput.getDetails()).isEqualTo(firstInput.getDetails());
-        assertThat(secondInput.getCount()).isEqualTo(2L);
-        assertThat(builder.collectDependencyArtifacts(second))
+        assertThat(secondInput.getTreeInput().getDetails()).isEqualTo(firstInput.getTreeInput().getDetails());
+        assertThat(secondInput.getTreeInput().getCount()).isEqualTo(2L);
+        assertThat(secondInput.getArtifacts())
                 .extracting(Artifact::getArtifactId)
                 .containsExactly("release-lib");
     }
@@ -42,8 +42,8 @@ public class DependencyTreeInputBuilderTest {
         TestNode first = node("root", "1.0-SNAPSHOT", node("release-lib", "1.0"));
         TestNode second = node("root", "1.0-SNAPSHOT", node("release-lib", "1.1"));
 
-        assertThat(builder.buildTreeInput(second).getDetails())
-                .isNotEqualTo(builder.buildTreeInput(first).getDetails());
+        assertThat(collector.collect(second).getTreeInput().getDetails())
+                .isNotEqualTo(collector.collect(first).getTreeInput().getDetails());
     }
 
     @Test
@@ -55,12 +55,12 @@ public class DependencyTreeInputBuilderTest {
                 node("snapshot-lib", "1.0-SNAPSHOT",
                         node("new-transitive", "1.0")));
 
-        InputState firstInput = builder.buildTreeInput(first);
-        InputState secondInput = builder.buildTreeInput(second);
+        DependencyInputs firstInput = collector.collect(first);
+        DependencyInputs secondInput = collector.collect(second);
 
-        assertThat(secondInput.getDetails()).isNotEqualTo(firstInput.getDetails());
-        assertThat(secondInput.getCount()).isEqualTo(3L);
-        assertThat(builder.collectDependencyArtifacts(second))
+        assertThat(secondInput.getTreeInput().getDetails()).isNotEqualTo(firstInput.getTreeInput().getDetails());
+        assertThat(secondInput.getTreeInput().getCount()).isEqualTo(3L);
+        assertThat(secondInput.getArtifacts())
                 .extracting(Artifact::getArtifactId)
                 .containsExactly("snapshot-lib", "new-transitive");
     }

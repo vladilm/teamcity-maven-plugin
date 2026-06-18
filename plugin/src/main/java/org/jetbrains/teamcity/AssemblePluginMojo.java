@@ -22,6 +22,7 @@ import org.eclipse.aether.repository.RemoteRepository;
 import org.jetbrains.teamcity.agent.AgentPluginWorkflow;
 import org.jetbrains.teamcity.agent.ResultArtifact;
 import org.jetbrains.teamcity.agent.WorkflowUtil;
+import org.jetbrains.teamcity.incremental.DependencyInputs;
 import org.jetbrains.teamcity.incremental.IncrementalCheckResult;
 import org.jetbrains.teamcity.incremental.IncrementalState;
 
@@ -117,12 +118,14 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
             final WorkflowUtil util = getWorkflowUtil();
             final DependencyNode rootNode = findRootNode();
             getLog().debug("Dependency Tree: " + util.serializeDependencyTree(rootNode));
+            DependencyInputs dependencyInputs = null;
 
             if (incremental) {
                 IncrementalState previousState = incrementalSupport.loadState();
                 IncrementalCheckResult checkResult = incrementalSupport.checkCheapState(previousState);
                 if (!checkResult.isComplete()) {
-                    checkResult = incrementalSupport.checkCurrentState(previousState, rootNode);
+                    dependencyInputs = incrementalSupport.collectDependencyInputs(rootNode);
+                    checkResult = incrementalSupport.checkCurrentState(previousState, dependencyInputs);
                 }
                 if (checkResult.isUpToDate()) {
                     getLog().info("TeamCity Assemble is up-to-date, skipping");
@@ -150,7 +153,10 @@ public class AssemblePluginMojo extends BaseTeamCityMojo {
                 List<ResultArtifact> attachedArtifacts = new ArrayList<>();
                 attachedArtifacts.addAll(agentArtifacts);
                 attachedArtifacts.addAll(serverArtifacts);
-                IncrementalState currentState = incrementalSupport.collectCurrentState(rootNode);
+                if (dependencyInputs == null) {
+                    dependencyInputs = incrementalSupport.collectDependencyInputs(rootNode);
+                }
+                IncrementalState currentState = incrementalSupport.collectCurrentState(dependencyInputs);
                 incrementalSupport.saveState(currentState.withOutputs(attachedArtifacts));
             }
         } catch (IOException e) {

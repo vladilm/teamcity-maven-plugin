@@ -50,8 +50,8 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
         MavenProject project = simpleProject();
         FailingFileSnapshotter snapshotter = new FailingFileSnapshotter();
         MavenIncrementalInputsCollector collector = simpleCollector(project, snapshotter);
-        DependencyTreeInputBuilder treeInputBuilder = new DependencyTreeInputBuilder();
-        InputState previousTree = treeInputBuilder.buildTreeInput(node("root", "1.0-SNAPSHOT", node("direct", "1.0")));
+        IncrementalDependencyInputsCollector dependencyInputsCollector = new IncrementalDependencyInputsCollector();
+        InputState previousTree = dependencyInputsCollector.collect(node("root", "1.0-SNAPSHOT", node("direct", "1.0"))).getTreeInput();
         Path output = Files.createTempFile("incremental-tree-output", ".zip");
         IncrementalState previous = previousState(
                 project,
@@ -61,7 +61,7 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
 
         IncrementalCheckResult result = collector.checkCurrentState(
                 previous,
-                node("root", "1.0-SNAPSHOT", node("direct", "1.1"))
+                dependencyInputsCollector.collect(node("root", "1.0-SNAPSHOT", node("direct", "1.1")))
         );
 
         assertThat(result.isComplete()).isTrue();
@@ -163,10 +163,51 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
         assertThat(state.getInputFingerprint()).doesNotContain("compile-lib");
         assertThat(state.getInputFingerprint()).doesNotContain("provided-lib");
 
-        IncrementalState stateWithRootNode = collector.collectCurrentState(node("root", "1.0-SNAPSHOT", node("compile-lib", "1.0")));
+        IncrementalState stateWithRootNode = collector.collectCurrentState(
+                new IncrementalDependencyInputsCollector().collect(node("root", "1.0-SNAPSHOT", node("compile-lib", "1.0")))
+        );
 
         assertThat(stateWithRootNode.getInputFingerprint()).contains("compile-lib");
         assertThat(stateWithRootNode.getInputFingerprint()).doesNotContain("provided-lib");
+    }
+
+    @Test
+    public void dependencyTreeIsTraversedOnceWhenDependencyInputsAreCollected() throws Exception {
+        MavenProject project = simpleProject();
+        TestNode direct = node("direct", "1.0-SNAPSHOT", node("transitive", "1.0"));
+        TestNode root = node("root", "1.0-SNAPSHOT", direct);
+
+        MavenIncrementalInputsCollector collector = simpleCollector(project, new FileSnapshotter());
+        DependencyInputs dependencyInputs = new IncrementalDependencyInputsCollector().collect(root);
+
+        collector.collectCurrentState(dependencyInputs);
+
+        assertThat(root.getTraversalCalls()).isEqualTo(1);
+        assertThat(direct.getTraversalCalls()).isEqualTo(1);
+    }
+
+    @Test
+    public void dependencyInputsCanBeReusedBetweenCheckAndStateCollection() throws Exception {
+        MavenProject project = simpleProject();
+        TestNode direct = node("direct", "1.0-SNAPSHOT", node("transitive", "1.0"));
+        TestNode root = node("root", "1.0-SNAPSHOT", direct);
+        MavenIncrementalInputsCollector collector = simpleCollector(project, new FileSnapshotter());
+        IncrementalDependencyInputsCollector dependencyInputsCollector = new IncrementalDependencyInputsCollector();
+        DependencyInputs dependencyInputs = dependencyInputsCollector.collect(root);
+
+        Path output = Files.createTempFile("incremental-tree-output", ".zip");
+        InputState previousTree = dependencyInputsCollector.collect(node("root", "1.0-SNAPSHOT", node("direct", "0.9"))).getTreeInput();
+        IncrementalState previous = previousState(
+                project,
+                Collections.singletonList(previousTree),
+                Collections.singletonList(outputState(output))
+        );
+
+        collector.checkCurrentState(previous, dependencyInputs);
+        collector.collectCurrentState(dependencyInputs);
+
+        assertThat(root.getTraversalCalls()).isEqualTo(1);
+        assertThat(direct.getTraversalCalls()).isEqualTo(1);
     }
 
     private InputState findInput(IncrementalState state, String keyPrefix) {
@@ -293,6 +334,7 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
         private final Artifact artifact;
         private final List<DependencyNode> children;
         private DependencyNode parent;
+        private int traversalCalls;
 
         private TestNode(Artifact artifact, TestNode... children) {
             this.artifact = artifact;
@@ -310,11 +352,13 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
 
         @Override
         public List<DependencyNode> getChildren() {
+            traversalCalls++;
             return children;
         }
 
         @Override
         public boolean accept(DependencyNodeVisitor visitor) {
+            traversalCalls++;
             if (!visitor.visit(this)) {
                 return false;
             }
@@ -358,6 +402,10 @@ public class MavenIncrementalInputsCollectorTest extends BasePluginTestCase {
         @Override
         public List<Exclusion> getExclusions() {
             return Collections.emptyList();
+        }
+
+        private int getTraversalCalls() {
+            return traversalCalls;
         }
     }
 }

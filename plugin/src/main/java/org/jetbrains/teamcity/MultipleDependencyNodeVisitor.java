@@ -14,13 +14,19 @@ public class MultipleDependencyNodeVisitor implements DependencyNodeVisitor {
 
     @Override
     public boolean visit(DependencyNode node) {
-        visitors.forEach(it -> it.visit(node));
-        return true;
+        boolean result = true;
+        for (DependencyNodeVisitor visitor : visitors) {
+            result = visitor.visit(node) && result;
+        }
+        return result;
     }
 
     @Override
     public boolean endVisit(DependencyNode node) {
-        visitors.forEach(it -> it.endVisit(node));
-        return true;
+        boolean result = true;
+        for (DependencyNodeVisitor visitor : visitors) {
+            result = visitor.endVisit(node) && result;
+        }
+        return result;
     }
 }
